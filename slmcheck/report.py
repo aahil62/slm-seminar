@@ -15,6 +15,7 @@ from statistics import mean
 from . import config
 from .cascade import cascade_curve
 from .evaluate import _load
+from .generate import load_all
 from .select import DIFFICULTIES, STRATEGIES, by_problem, per_config_table, select
 from .stats import bootstrap_mean_ci, exact_mcnemar, gap_recovered, holm, wilson
 
@@ -206,7 +207,7 @@ def _git_commit() -> str | None:
 
 def report(run_dir: Path | str, out_dir: Path | str = "bundle") -> Path:
     run, out = Path(run_dir), Path(out_dir)
-    exec_rows, samples = _load(run / "exec.jsonl"), _load(run / "samples.jsonl")
+    exec_rows, samples = _load(run / "exec.jsonl"), load_all(run, "samples")
     if not exec_rows:
         raise SystemExit(f"no exec.jsonl rows in {run}; run `evaluate` first")
     fake = any(s.get("model_digest") == "fake" for s in samples)
@@ -216,8 +217,9 @@ def report(run_dir: Path | str, out_dir: Path | str = "bundle") -> Path:
     figs = _figures(tables, out / "figures")
     raw = out / "raw"
     raw.mkdir(parents=True, exist_ok=True)
-    for f in ["problems.jsonl", "samples.jsonl", "selftests.jsonl", "exec.jsonl", "progress.log",
-              "VERIFICATION_REPORT.md"]:
+    names = ["problems.jsonl", "exec.jsonl", "progress.log", "VERIFICATION_REPORT.md",
+             "verify_state.json"] + [p.name for p in run.glob("s*__*.jsonl")]
+    for f in names:
         if (run / f).exists():
             shutil.copy2(run / f, raw / f)
     if (run / "VERIFICATION_REPORT.md").exists():

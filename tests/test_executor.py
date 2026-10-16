@@ -40,7 +40,7 @@ def test_infinite_loop_times_out_quickly():
     t0 = time.time()
     r = run_tests("while True:\n    pass\n", [S("", "1"), S("", "1")], None, 1.0)
     assert [x.status for x in r] == ["timeout", "timeout"]
-    assert time.time() - t0 < 5
+    assert time.time() - t0 < 10
 
 
 def test_exit_call_handled():
@@ -87,3 +87,11 @@ def test_fixture_reference_solutions():
         bad = run_tests(sols[p.id]["bad"], tests, p.func_name, 2, stop_on_fail=True)
         assert all(r.passed for r in good), (p.id, good)
         assert not all(r.passed for r in bad), p.id
+
+
+def test_timeout_is_per_test_not_total():
+    code = "x=input()\nif x=='hang':\n    while True: pass\nprint(x)\n"
+    tests = [S("hang", "1")] + [S(str(i), str(i)) for i in range(20)]
+    t0 = time.time()
+    r = run_tests(code, tests, None, 1.0)
+    assert r[0].status == "timeout" and time.time() - t0 < 10

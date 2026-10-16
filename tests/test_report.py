@@ -26,7 +26,7 @@ def test_report_writes_all_files_from_fixture_run(tmp_path):
     samples = [{"cfg": r["cfg"], "problem_id": r["problem_id"], "sample_idx": r["sample_idx"],
                 "code": "x", "wall_s": 1.0, "completion_tokens": 10, "model_digest": "fake"}
                for r in rows]
-    (run / "samples.jsonl").write_text("".join(json.dumps(s) + "\n" for s in samples))
+    (run / "samples__all.jsonl").write_text("".join(json.dumps(s) + "\n" for s in samples))
     out = report.report(run, tmp_path / "bundle")
     for name in ["accuracy_by_strategy", "gap_recovered", "false_pass", "cascade", "mcnemar", "cost"]:
         assert (out / "tables" / f"{name}.csv").stat().st_size > 50

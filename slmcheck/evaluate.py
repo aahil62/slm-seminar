@@ -10,7 +10,7 @@ from typing import Sequence
 from . import config
 from .dataset import Problem, Test
 from .executor import outputs_equal, run_tests
-from .generate import _keys, _repair_tail
+from .generate import _keys, _repair_tail, load_all
 
 
 def _load(path: Path) -> list[dict]:
@@ -31,7 +31,7 @@ def evaluate(run_dir: Path | str, problems: Sequence[Problem]) -> int:
     pmap = {p.id: p for p in problems}
     selftests = {(r["cfg"], r["problem_id"]): [Test(t["input"], t["output"], pmap[r["problem_id"]].testtype)
                                                for t in r["tests"]]
-                 for r in _load(run / "selftests.jsonl") if r["problem_id"] in pmap}
+                 for r in load_all(run, "selftests") if r["problem_id"] in pmap}
     exec_p = run / "exec.jsonl"
     _repair_tail(exec_p)
     done = _keys(exec_p, ("cfg", "problem_id", "sample_idx"))
@@ -39,7 +39,7 @@ def evaluate(run_dir: Path | str, problems: Sequence[Problem]) -> int:
     written = 0
     with open(exec_p, "a", encoding="utf-8") as ef, \
             open(run / "progress.log", "a", encoding="utf-8") as logf:
-        samples = [s for s in _load(run / "samples.jsonl") if s["problem_id"] in pmap]
+        samples = [s for s in load_all(run, "samples") if s["problem_id"] in pmap]
         for n, s in enumerate(samples, 1):
             key = (s["cfg"], s["problem_id"], s["sample_idx"])
             if key in done:

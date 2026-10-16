@@ -20,8 +20,8 @@ def test_evaluate_end_to_end_on_fixtures(tmp_path):
                             "code": SOLS[p.id][kind] if p.id != "fx_primes" or kind == "good" else ""})
     selftests.append({"cfg": "m", "problem_id": "fx_add",
                       "tests": [{"input": "2 2\n", "output": "4\n"}, {"input": "1 1\n", "output": "3\n"}]})
-    _write(tmp_path / "samples.jsonl", samples)
-    _write(tmp_path / "selftests.jsonl", selftests)
+    _write(tmp_path / "samples__m.jsonl", samples)
+    _write(tmp_path / "selftests__m.jsonl", selftests)
     assert evaluate.evaluate(tmp_path, probs) == 9
     assert evaluate.evaluate(tmp_path, probs) == 0  # resumable
     rows = {(r["problem_id"], r["sample_idx"]): r for r in

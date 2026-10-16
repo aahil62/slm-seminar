@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import signal
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Optional, Sequence
@@ -15,6 +18,7 @@ from ._driver import TAG, outputs_equal  # noqa: F401 - re-exported
 from .dataset import Test
 
 DRIVER = str(Path(__file__).with_name("_driver.py"))
+STARTUP_GRACE_S = 5.0  # interpreter start + payload parse before the first test result
 Status = Literal["pass", "fail", "error", "timeout", "skipped", "ran"]
 
 
@@ -50,22 +54,47 @@ def run_tests(code: str, tests: Sequence[Test], func_name: Optional[str], timeou
     })
     kwargs = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" \
         else {"start_new_session": True}
+    results: dict[int, TestResult] = {}
     with tempfile.TemporaryDirectory(prefix="slmcheck_") as tmp:
         proc = subprocess.Popen([sys.executable, "-I", DRIVER], stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=tmp,
                                 **kwargs)
+        lines: queue.Queue = queue.Queue()
+
+        def pump():
+            for raw in proc.stdout:
+                lines.put(raw)
+            lines.put(None)
+
+        threading.Thread(target=pump, daemon=True).start()
         try:
-            out, _ = proc.communicate(payload.encode("utf-8"), timeout=timeout_s * len(tests))
+            proc.stdin.write(payload.encode("utf-8"))
+            proc.stdin.close()
+        except (BrokenPipeError, OSError):
+            pass
+        # Per-test deadline: each result line must arrive within timeout_s of the previous one
+        # (plus a start-up grace for the first). A silent test means it is hung: kill the tree.
+        deadline = time.monotonic() + timeout_s + STARTUP_GRACE_S
+        while len(results) < len(tests):
+            try:
+                raw = lines.get(timeout=max(0.0, deadline - time.monotonic()))
+            except queue.Empty:
+                _kill_tree(proc)
+                break
+            if raw is None:
+                break
+            line = raw.decode("utf-8", "replace")
+            if not line.startswith(TAG):
+                continue
+            try:
+                d = json.loads(line[len(TAG):])
+            except json.JSONDecodeError:
+                continue
+            results[d["i"]] = TestResult(d["status"] == "pass", d["status"], d.get("got"))
+            deadline = time.monotonic() + timeout_s
+        try:
+            proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             _kill_tree(proc)
-            out, _ = proc.communicate()
-    results: dict[int, TestResult] = {}
-    for line in out.decode("utf-8", "replace").splitlines():
-        if not line.startswith(TAG):
-            continue
-        try:
-            d = json.loads(line[len(TAG):])
-        except json.JSONDecodeError:
-            continue
-        results[d["i"]] = TestResult(d["status"] == "pass", d["status"], d.get("got"))
+            proc.wait()
     return [results.get(i, TestResult(False, "timeout")) for i in range(len(tests))]
