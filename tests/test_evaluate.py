@@ -1,0 +1,34 @@
+import json
+
+from slmcheck import evaluate
+from slmcheck.dataset import load_problems
+
+FIX = "slmcheck/fixtures/problems.jsonl"
+SOLS = json.load(open("slmcheck/fixtures/solutions.json"))
+
+
+def _write(path, rows):
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+
+
+def test_evaluate_end_to_end_on_fixtures(tmp_path):
+    probs = load_problems(FIX)
+    samples, selftests = [], []
+    for p in probs:
+        for i, kind in enumerate(["good", "bad", "good"]):
+            samples.append({"cfg": "m", "problem_id": p.id, "sample_idx": i,
+                            "code": SOLS[p.id][kind] if p.id != "fx_primes" or kind == "good" else ""})
+    selftests.append({"cfg": "m", "problem_id": "fx_add",
+                      "tests": [{"input": "2 2\n", "output": "4\n"}, {"input": "1 1\n", "output": "3\n"}]})
+    _write(tmp_path / "samples.jsonl", samples)
+    _write(tmp_path / "selftests.jsonl", selftests)
+    assert evaluate.evaluate(tmp_path, probs) == 9
+    assert evaluate.evaluate(tmp_path, probs) == 0  # resumable
+    rows = {(r["problem_id"], r["sample_idx"]): r for r in
+            map(json.loads, open(tmp_path / "exec.jsonl"))}
+    assert rows[("fx_add", 0)]["hidden_pass"] and not rows[("fx_add", 1)]["hidden_pass"]
+    assert rows[("fx_add", 0)]["self"] == [True, False]
+    assert rows[("fx_add", 0)]["sig"] == rows[("fx_add", 2)]["sig"] != rows[("fx_add", 1)]["sig"]
+    assert rows[("fx_twosum", 0)]["hidden_pass"] and rows[("fx_twosum", 1)]["public"] == [True]
+    assert not rows[("fx_twosum", 1)]["hidden_pass"]  # passes the example, fails hidden: a false pass
+    assert rows[("fx_primes", 1)]["empty"] and rows[("fx_primes", 1)]["sig"] is None
