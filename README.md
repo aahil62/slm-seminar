@@ -35,7 +35,8 @@ download -> prepare -> verify(env,data,exec,backend) -> generate -> evaluate -> 
   - S2: example cases
   - S3: self-written tests
   - S4: majority vote
-- **Outputs:** accuracy, gap recovered, false-pass rate, local-first escalation curves, McNemar tests,
+  - S5: example cases and majority vote combined
+- **Outputs:** accuracy, gap recovered, false-pass rate, silent bugs by type, local-first escalation curves, McNemar tests,
   cost.
 
 ## Local check (no models)

@@ -98,3 +98,23 @@ def test_oracle_baseline_dominates_random():
     for r in (0.0, 0.3, 0.7, 1.0):
         assert cascade.oracle_baseline([True, False, False], [False, True, True], r) >= \
             cascade.random_baseline([True, False, False], [False, True, True], r)
+
+
+def test_S5_needs_examples_and_majority():
+    rows = [row(0, False, public=(False,), sig="x"), row(1, True, sig="y"), row(2, True, sig="y"),
+            row(3, False, sig="z")]
+    p = select.select(rows, "S5")
+    assert (p.sample_idx, p.correct, p.accepted) == (1, True, False)  # 2 of 4 agree: not a majority
+    rows.append(row(4, True, sig="y"))
+    assert select.select(rows, "S5").accepted is True
+
+
+def test_S5_nothing_passes_examples():
+    rows = [row(0, False, public=(False,)), row(1, True, public=(False,))]
+    assert select.select(rows, "S5") == select.Pick(0, False, False, None)
+
+
+def test_pick_carries_fail_kind():
+    r = row(0, False)
+    r["fail_kind"] = "timeout"
+    assert select.select([r], "S2").fail_kind == "timeout"

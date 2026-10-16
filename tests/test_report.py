@@ -28,7 +28,7 @@ def test_report_writes_all_files_from_fixture_run(tmp_path):
                for r in rows]
     (run / "samples__all.jsonl").write_text("".join(json.dumps(s) + "\n" for s in samples))
     out = report.report(run, tmp_path / "bundle")
-    for name in ["accuracy_by_strategy", "gap_recovered", "false_pass", "cascade", "mcnemar", "cost"]:
+    for name in ["accuracy_by_strategy", "gap_recovered", "false_pass", "silent_bugs", "cascade", "mcnemar", "cost"]:
         assert (out / "tables" / f"{name}.csv").stat().st_size > 50
     assert (out / "figures" / "fig_cascade_llm1.png").exists()
     md = (out / "RESULTS.md").read_text()

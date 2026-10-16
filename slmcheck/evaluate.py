@@ -61,10 +61,14 @@ def evaluate(run_dir: Path | str, problems: Sequence[Problem]) -> int:
     return written
 
 
+_KIND = {"fail": "wrong_answer", "error": "runtime_error", "timeout": "timeout"}
+
+
 def _execute(code: str, p: Problem, selftests: list[Test]) -> dict:
+    """fail_kind: why hidden grading failed (wrong_answer / runtime_error / timeout / empty)."""
     timeout = config.TIMEOUT_HARD_S if p.difficulty == "hard" else config.TIMEOUT_S
     if not code.strip():
-        return {"hidden_pass": False, "public": [False] * len(p.public),
+        return {"hidden_pass": False, "fail_kind": "empty", "public": [False] * len(p.public),
                 "self": [False] * len(selftests), "sig": None}
     probe = list(p.public) + list(selftests)
     ran = run_tests(code, probe, p.func_name, timeout, expect_outputs=False)
@@ -75,8 +79,14 @@ def _execute(code: str, p: Problem, selftests: list[Test]) -> dict:
     if any(g is not None for g in got):
         norm = [" ".join(g.split()) if g is not None else "<none>" for g in got]
         sig = hashlib.sha256(json.dumps(norm).encode()).hexdigest()[:16]
-    hidden = all(public) and bool(public)
-    if hidden and p.private:
-        hidden = all(r.passed for r in run_tests(code, p.private, p.func_name, timeout,
-                                                 stop_on_fail=True))
-    return {"hidden_pass": hidden, "public": public, "self": self_, "sig": sig}
+    fail_kind = None
+    bad_public = next((r for r, ok in zip(ran, public) if not ok), None)
+    if bad_public is not None or not public:
+        fail_kind = _KIND.get(bad_public.status if bad_public else "fail", "wrong_answer")
+    elif p.private:
+        bad = next((r for r in run_tests(code, p.private, p.func_name, timeout, stop_on_fail=True)
+                    if not r.passed), None)
+        if bad is not None:
+            fail_kind = _KIND.get(bad.status, "wrong_answer")
+    return {"hidden_pass": fail_kind is None, "fail_kind": fail_kind, "public": public,
+            "self": self_, "sig": sig}

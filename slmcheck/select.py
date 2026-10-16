@@ -7,7 +7,7 @@ from typing import Optional, Sequence
 
 from . import config
 
-STRATEGIES = ["S0", "S1", "S2", "S3", "S4"]
+STRATEGIES = ["S0", "S1", "S2", "S3", "S4", "S5"]
 DIFFICULTIES = ["easy", "medium", "hard", "all"]
 
 
@@ -16,6 +16,7 @@ class Pick:
     sample_idx: int
     accepted: Optional[bool]
     correct: bool
+    fail_kind: Optional[str] = None
 
 
 def _public_ok(r: dict) -> bool:
@@ -23,7 +24,7 @@ def _public_ok(r: dict) -> bool:
 
 
 def _pick(r: dict, accepted: Optional[bool]) -> Pick:
-    return Pick(r["sample_idx"], accepted, bool(r["hidden_pass"]))
+    return Pick(r["sample_idx"], accepted, bool(r["hidden_pass"]), r.get("fail_kind"))
 
 
 def select(rows: Sequence[dict], strategy: str, tau: float = config.PRIMARY_TAU) -> Pick:
@@ -53,6 +54,17 @@ def select(rows: Sequence[dict], strategy: str, tau: float = config.PRIMARY_TAU)
         best = min(groups.values(), key=lambda g: (-len(g), not _public_ok(rep(g)),
                                                    rep(g)["sample_idx"]))
         return _pick(rep(best), len(best) > len(rows) / 2)
+    if strategy == "S5":
+        # combined check: among samples passing the examples, take the largest agreeing group;
+        # accept only if that group is a majority of all k samples
+        groups = defaultdict(list)
+        for r in rows:
+            if _public_ok(r) and r.get("sig"):
+                groups[r["sig"]].append(r)
+        if not groups:
+            return _pick(rows[0], False)
+        best = min(groups.values(), key=lambda g: (-len(g), g[0]["sample_idx"]))
+        return _pick(best[0], len(best) > len(rows) / 2)
     raise ValueError(f"unknown strategy {strategy}")
 
 

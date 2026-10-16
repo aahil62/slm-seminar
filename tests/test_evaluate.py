@@ -32,3 +32,15 @@ def test_evaluate_end_to_end_on_fixtures(tmp_path):
     assert rows[("fx_twosum", 0)]["hidden_pass"] and rows[("fx_twosum", 1)]["public"] == [True]
     assert not rows[("fx_twosum", 1)]["hidden_pass"]  # passes the example, fails hidden: a false pass
     assert rows[("fx_primes", 1)]["empty"] and rows[("fx_primes", 1)]["sig"] is None
+
+
+def test_fail_kind_categories():
+    from slmcheck.evaluate import _execute
+    p = [q for q in load_problems(FIX) if q.id == "fx_add"][0]
+    assert _execute(SOLS["fx_add"]["good"], p, [])["fail_kind"] is None
+    assert _execute(SOLS["fx_add"]["bad"], p, [])["fail_kind"] == "wrong_answer"
+    assert _execute("print(1/0)", p, [])["fail_kind"] == "runtime_error"
+    assert _execute("", p, [])["fail_kind"] == "empty"
+    tricky = "a,b=map(int,input().split())\nprint(a+b if a<10 else 0)\n"  # passes example, fails hidden
+    r = _execute(tricky, p, [])
+    assert r["public"] == [True] and r["fail_kind"] == "wrong_answer"

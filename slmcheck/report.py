@@ -19,7 +19,8 @@ from .generate import load_all
 from .select import DIFFICULTIES, STRATEGIES, by_problem, per_config_table, select
 from .stats import bootstrap_mean_ci, exact_mcnemar, gap_recovered, holm, wilson
 
-REALISTIC = ["S2", "S3", "S4"]
+REALISTIC = ["S2", "S3", "S4", "S5"]
+FAIL_KINDS = ["wrong_answer", "timeout", "runtime_error", "empty"]
 
 
 def _write_csv(path: Path, rows: list[dict]) -> None:
@@ -89,6 +90,18 @@ def build_tables(exec_rows: list[dict], samples: list[dict]) -> dict[str, list[d
                                      "false_pass_rate", "accuracy")}
                   for r in acc_rows if r["strategy"] in REALISTIC]
 
+    silent = []
+    for slm in slms:
+        rows = by_problem(exec_rows, slm)
+        for s in REALISTIC:
+            picks = [select(r, s) for r in rows.values()]
+            wrong = [p for p in picks if p.accepted and not p.correct]
+            row = {"cfg": slm, "strategy": s, "accepted": sum(1 for p in picks if p.accepted),
+                   "silent_bugs": len(wrong)}
+            for k in FAIL_KINDS:
+                row[k] = sum(1 for p in wrong if p.fail_kind == k)
+            silent.append(row)
+
     casc = []
     for slm in slms:
         srows = [r for r in exec_rows if r["cfg"] == slm]
@@ -126,6 +139,7 @@ def build_tables(exec_rows: list[dict], samples: list[dict]) -> dict[str, list[d
                      "errors": sum(1 for s in ss if s.get("error")),
                      "empty_code": sum(1 for s in ss if not s.get("code", "").strip())})
     return {"accuracy_by_strategy": acc_rows, "gap_recovered": gap, "false_pass": false_pass,
+            "silent_bugs": silent,
             "cascade": casc, "mcnemar": tests, "cost": cost}
 
 
@@ -142,7 +156,7 @@ def _figures(tables: dict, out: Path) -> list[str]:
     files = []
 
     fig, ax = plt.subplots(figsize=(7, 3.2))
-    strategies = ["S0", "S2", "S3", "S4", "S1"]
+    strategies = ["S0", "S2", "S3", "S4", "S5", "S1"]
     w = 0.8 / len(strategies)
     for j, s in enumerate(strategies):
         vals = [next((r["accuracy"] for r in acc if r["cfg"] == c and r["strategy"] == s
@@ -153,7 +167,7 @@ def _figures(tables: dict, out: Path) -> list[str]:
         ax.text(len(slms) - 0.4, v, name, fontsize=7, va="bottom", ha="right")
     ax.set_xticks([i + 0.4 - w / 2 for i in range(len(slms))], slms, rotation=15, fontsize=7)
     ax.set_ylabel("accuracy (hidden tests)")
-    ax.legend(fontsize=7, ncol=5)
+    ax.legend(fontsize=7, ncol=6)
     fig.tight_layout()
     fig.savefig(out / "fig_accuracy_by_strategy.png", dpi=200)
     plt.close(fig)
@@ -165,8 +179,8 @@ def _figures(tables: dict, out: Path) -> list[str]:
     for j, s in enumerate(REALISTIC):
         vals = [next((r["false_pass_rate"] or 0 for r in fp if r["cfg"] == c and r["strategy"] == s), 0)
                 for c in slms]
-        ax.bar([i + j * 0.27 for i in range(len(slms))], vals, 0.27, label=s)
-    ax.set_xticks([i + 0.27 for i in range(len(slms))], slms, rotation=15, fontsize=7)
+        ax.bar([i + j * 0.2 for i in range(len(slms))], vals, 0.2, label=s)
+    ax.set_xticks([i + 0.3 for i in range(len(slms))], slms, rotation=15, fontsize=7)
     ax.set_ylabel("false-pass rate")
     ax.legend(fontsize=7)
     fig.tight_layout()
@@ -262,6 +276,12 @@ def _results_md(tables: dict, figs: list[str], meta: dict) -> str:
     for r in tables["gap_recovered"]:
         if r["difficulty"] == "all":
             lines.append(f"| {r['slm']} | {r['llm']} | {r['strategy']} | {_fmt(r['gap_recovered'])} |")
+    lines += ["", "## Silent bugs by type: accepted by the check but wrong (tables/silent_bugs.csv)", "",
+              "| cfg | strategy | accepted | silent bugs | wrong answer | timeout | runtime error |",
+              "|---|---|---|---|---|---|---|"]
+    for r in tables["silent_bugs"]:
+        lines.append(f"| {r['cfg']} | {r['strategy']} | {r['accepted']} | {r['silent_bugs']} | "
+                     f"{r['wrong_answer']} | {r['timeout']} | {r['runtime_error']} |")
     lines += ["", "## Local-first escalation (tables/cascade.csv)", "",
               "| slm | llm | strategy | tau | escalated | accuracy | random | oracle |",
               "|---|---|---|---|---|---|---|---|"]
