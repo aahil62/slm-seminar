@@ -17,6 +17,14 @@ _FUNC_FORMAT = ("You will use the following starter code to write the solution t
 
 
 def codegen_messages(p: Problem) -> list[dict]:
+    if p.testtype == "script":
+        user = (f"### Question:\n{p.content}\nYour code should pass this test:\n"
+                f"```python\n{p.public[0].input.strip()}\n```\n\n"
+                f"### Format: Write the complete Python function `{p.func_name}` (with any imports and "
+                "helpers it needs) and enclose your code within delimiters as follows.\n"
+                "```python\n# YOUR CODE HERE\n```\n\n"
+                "### Answer: (use the provided format with backticks)\n")
+        return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
     fmt = _FUNC_FORMAT.format(starter=p.starter_code.rstrip()) if p.testtype == "functional" else _STDIN_FORMAT
     user = (f"### Question:\n{p.content}\n\n### Format: {fmt}\n\n"
             "### Answer: (use the provided format with backticks)\n")
@@ -25,6 +33,13 @@ def codegen_messages(p: Problem) -> list[dict]:
 
 def selftest_messages(p: Problem, n: int = 5) -> list[dict]:
     ex = p.public[0]
+    if p.testtype == "script":
+        user = (f"### Question:\n{p.content}\nExample test:\n```python\n{ex.input.strip()}\n```\n"
+                f"Write {n} NEW assert statements testing `{p.func_name}` (different from the example), "
+                "including edge cases, one per line. Compute each expected value carefully. Reply with "
+                "only the assert lines inside one ```python block.")
+        return [{"role": "system", "content": "You are a careful software tester."},
+                {"role": "user", "content": user}]
     if p.testtype == "functional":
         how = ("Each \"input\" is the function arguments, one JSON value per line, exactly like the "
                "example; each \"output\" is the JSON return value.")
@@ -56,7 +71,24 @@ def _as_text(v) -> str:
     return v if isinstance(v, str) else json.dumps(v)
 
 
+def _parse_assert_lines(text: str) -> list[Test]:
+    import ast
+    out = []
+    for line in extract_code(text).splitlines():
+        line = line.strip()
+        if not line.startswith("assert "):
+            continue
+        try:
+            ast.parse(line)
+        except SyntaxError:
+            continue
+        out.append(Test(line, "", "script"))
+    return out
+
+
 def parse_selftests(text: str, testtype: str) -> list[Test]:
+    if testtype == "script":
+        return _parse_assert_lines(text)
     text = _THINK.sub("", text or "")
     candidates = [b for _, b in _FENCE.findall(text)] + [text]
     for c in candidates:

@@ -95,3 +95,17 @@ def test_timeout_is_per_test_not_total():
     t0 = time.time()
     r = run_tests(code, tests, None, 1.0)
     assert r[0].status == "timeout" and time.time() - t0 < 10
+
+
+def test_script_mode_assert_pass_fail_error():
+    code = "def add(a, b):\n    return a + b\n"
+    tests = [Test("assert add(1, 2) == 3", "", "script"), Test("assert add(1, 2) == 4", "", "script"),
+             Test("assert undefined_fn(1)", "", "script")]
+    r = run_tests(code, tests, "add", 5)
+    assert [x.status for x in r] == ["pass", "fail", "error"]
+
+
+def test_script_mode_collects_printed_output():
+    code = "def sq(x):\n    return x * x\n"
+    r = run_tests(code, [Test("print(repr(sq(3)))", "", "script")], "sq", 5, expect_outputs=False)
+    assert r[0].status == "ran" and r[0].got.strip() == "9"

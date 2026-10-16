@@ -62,6 +62,8 @@ def main(argv=None) -> int:
                                         "report", "all"])
     ap.add_argument("--run-dir", default="runs/main")
     ap.add_argument("--raw-dir", default="data/raw")
+    ap.add_argument("--benchmark", choices=["livecodebench", "mbppplus"], default="livecodebench",
+                    help="download/prepare only")
     ap.add_argument("--out", default=None, help="bundle directory (default: <run-dir>/../../bundle)")
     ap.add_argument("--stage", choices=["env", "data", "exec", "backend", "post"])
     ap.add_argument("--cfg", nargs="*", help="config names (default: all)")
@@ -76,7 +78,17 @@ def main(argv=None) -> int:
     cfgs = _cfgs(a)
 
     if a.command == "download":
-        print("\n".join(str(p) for p in dataset.download_raw(a.raw_dir)))
+        if a.benchmark == "mbppplus":
+            print(dataset.download_mbpp(a.raw_dir))
+        else:
+            print("\n".join(str(p) for p in dataset.download_raw(a.raw_dir)))
+        return 0
+    if a.command == "prepare" and a.benchmark == "mbppplus":
+        raw = Path(a.raw_dir) / "mbppplus.jsonl"
+        if not raw.exists():
+            sys.exit(f"{raw} missing: run `download --benchmark mbppplus` first")
+        n = dataset.build_mbpp_problem_file(raw, run / "problems.jsonl")
+        print(f"{n} MBPP+ problems (seed {config.MBPP_SEED}) -> {run / 'problems.jsonl'}")
         return 0
     if a.command == "prepare":
         raws = sorted(Path(a.raw_dir).glob("test*.jsonl"))
@@ -95,7 +107,8 @@ def main(argv=None) -> int:
         if stage == "env":
             g = verify.gate_env(run, cfgs)
         elif stage == "data":
-            g = verify.gate_data(run, probs, min_p if not a.limit else 1)
+            g = verify.gate_data(run, probs, min_p if not a.limit else 1,
+                                 mbpp_raw=Path(a.raw_dir) / "mbppplus.jsonl")
         elif stage == "exec":
             g = verify.gate_exec(run)
         elif stage == "backend":

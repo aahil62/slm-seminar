@@ -1,7 +1,7 @@
 """Child-process driver: runs one candidate program against a list of tests.
 
 Invoked as `python -I _driver.py` with a JSON payload on stdin:
-  {"code": str, "testtype": "stdin"|"functional", "func_name": str|None,
+  {"code": str, "testtype": "stdin"|"functional"|"script", "func_name": str|None,
    "tests": [{"input": str, "output": str|None}], "stop_on_fail": bool}
 Writes one protocol line per test to the original stdout: TAG + json.
 Kept free of package imports so it runs isolated (-I) from a temp directory.
@@ -26,6 +26,8 @@ def _tokens(s):
 def outputs_equal(expected, got, testtype):
     if got is None:
         return False
+    if testtype == "script":  # an assert script passes when it ran without raising
+        return True
     if testtype == "functional":
         try:
             return json.loads(expected) == json.loads(got)
@@ -89,6 +91,20 @@ def _run_functional(code_obj, func_name, text):
         sys.stdout = sys.__stdout__
 
 
+def _run_script(code_obj, script):
+    """MBPP+-style: define the candidate, then run an assert/print script in the same namespace."""
+    ns = {"__name__": "__main__", "__builtins__": __builtins__}
+    buf = io.StringIO()
+    sys.stdout = io.StringIO()
+    try:
+        exec(code_obj, ns)
+        sys.stdout = buf
+        exec(compile(script, "<test>", "exec"), ns)
+    finally:
+        sys.stdout = sys.__stdout__
+    return buf.getvalue()
+
+
 def main():
     payload = json.loads(sys.stdin.read())
     proto = os.fdopen(os.dup(1), "w", encoding="utf-8")
@@ -115,8 +131,15 @@ def main():
                 if not payload.get("func_name"):
                     raise ValueError("no func_name")
                 got = _run_functional(code_obj, payload["func_name"], t["input"])
+            elif payload["testtype"] == "script":
+                got = _run_script(code_obj, t["input"])
             else:
                 got = _run_stdin(code_obj, t["input"])
+        except AssertionError:
+            sys.stdout = sys.__stdout__
+            emit(i, "fail" if payload["testtype"] == "script" else "error")
+            stop = payload.get("stop_on_fail", False)
+            continue
         except BaseException:  # noqa: BLE001 - any candidate failure is an error result
             sys.stdout = sys.__stdout__
             emit(i, "error")

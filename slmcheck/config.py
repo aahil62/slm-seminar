@@ -8,6 +8,15 @@ SINCE = "2025-01-01"
 LCB_URL = "https://huggingface.co/datasets/livecodebench/code_generation_lite/resolve/main/{name}"
 LCB_FILES = ["test5.jsonl", "test6.jsonl", "test7.jsonl", "test8.jsonl"]  # missing ones are skipped
 
+MBPP_ROWS_URL = ("https://datasets-server.huggingface.co/rows?dataset=evalplus/mbppplus"
+                 "&config=default&split=test&offset={offset}&length=100")
+MBPP_SAMPLE = 200          # fixed random subset of MBPP+'s 378 problems (Groq daily-limit budget)
+MBPP_SEED = 20261016
+# Broken benchmark items: the reference solution fails its own hidden tests. Excluded before sampling.
+MBPP_EXCLUDE = {
+    590: "reference solution fails its plus test by a last-digit float difference (checked 2026-10-16)",
+}
+
 SAMPLE_TEMPERATURE = 0.8
 SAMPLE_TOP_P = 0.95
 TIMEOUT_S = 6.0

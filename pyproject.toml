@@ -1,9 +1,9 @@
 [project]
 name = "slmcheck"
 version = "0.1.0"
-description = "Local SLMs vs cloud LLMs under realistic answer checkers (LiveCodeBench)"
+description = "Local SLMs vs cloud LLMs under realistic answer checkers (LiveCodeBench, MBPP+)"
 requires-python = ">=3.11"
-dependencies = ["matplotlib>=3.7"]
+dependencies = ["matplotlib>=3.7", "numpy>=1.24"]
 
 [project.optional-dependencies]
 test = ["pytest>=7"]

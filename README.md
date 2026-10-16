@@ -28,7 +28,7 @@ download -> prepare -> verify(env,data,exec,backend) -> generate -> evaluate -> 
 - **Models:**
   - local via Ollama: qwen2.5-coder 1.5b and 7b, deepseek-coder 6.7b, qwen3 4b with thinking off and on
   - cloud via the Groq free tier: gpt-oss-120b, llama-3.3-70b
-- **Problems:** LiveCodeBench, `contest_date >= 2025-01-01`.
+- **Problems:** LiveCodeBench with `contest_date >= 2025-01-01` (primary), plus MBPP+, a fixed random 200 chosen for its strict hidden tests.
 - **Strategies:**
   - S0: first answer
   - S1: oracle best-of-k

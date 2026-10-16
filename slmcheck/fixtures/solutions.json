@@ -10,5 +10,9 @@
  "fx_primes": {
   "good": "n=int(input())\ns=bytearray([1])*(n+1)\ns[0:2]=b'\\x00\\x00'\ni=2\nwhile i*i<=n:\n    if s[i]: s[i*i::i]=bytearray(len(s[i*i::i]))\n    i+=1\nprint(sum(s))\n",
   "bad": "n=int(input())\nprint(sum(1 for x in range(2,n+1) if all(x%d for d in range(2,int(x**0.5)+1))) if n<1000 else n//15)\n"
+ },
+ "mbpp/3": {
+  "good": null,
+  "bad": "def is_not_prime(n):\n    return n % 2 == 0 and n != 2\n"
  }
 }

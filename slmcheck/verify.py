@@ -20,7 +20,7 @@ from typing import Callable, Optional, Sequence
 from . import config, prompts
 from .backends import Backend, make_backend
 from .config import ModelConfig
-from .dataset import Problem, load_problems
+from .dataset import Problem, load_problems, mbpp_row_to_problem
 from .evaluate import _load
 from .executor import run_tests
 from .generate import load_all, seed_for
@@ -99,16 +99,27 @@ def gate_env(run_dir: Path, cfgs: Sequence[ModelConfig]) -> Gate:
     return g
 
 
-def gate_data(run_dir: Path, problems: Sequence[Problem], min_problems: int = 150) -> Gate:
+def gate_data(run_dir: Path, problems: Sequence[Problem], min_problems: int = 150,
+              mbpp_raw: Optional[Path] = None) -> Gate:
     g = Gate("data")
+    mbpp = [p for p in problems if p.benchmark == "mbppplus"]
+    if mbpp and mbpp_raw and Path(mbpp_raw).exists():
+        ref = {f"mbpp/{json.loads(l)['task_id']}": json.loads(l)["code"]
+               for l in Path(mbpp_raw).read_text(encoding="utf-8").splitlines() if l.strip()}
+        broken = [p.id for p in mbpp if p.id in ref and not all(
+            r.passed for r in run_tests(ref[p.id], p.public + p.private, p.func_name, config.TIMEOUT_HARD_S))]
+        g.check("MBPP+ reference solutions pass their own tests on this machine", not broken,
+                f"broken: {broken} -> add to config.MBPP_EXCLUDE with the reason, rerun prepare, note it",
+                flag_only=True)
     g.check(f"problem count >= {min_problems}", len(problems) >= min_problems, f"{len(problems)} problems")
     bad = [p.id for p in problems if not p.public or not p.private]
     g.check("every problem has public and private tests", not bad, f"missing: {bad[:10]}")
     diff = {d: sum(p.difficulty == d for p in problems) for d in ("easy", "medium", "hard")}
-    g.check("difficulty mix", all(diff.values()), json.dumps(diff), flag_only=True)
-    tt = {t: sum(p.testtype == t for p in problems) for t in ("stdin", "functional")}
+    if any(p.benchmark == "livecodebench" for p in problems):  # MBPP+ has no difficulty tiers
+        g.check("difficulty mix", all(diff.values()), json.dumps(diff), flag_only=True)
+    tt = {t: sum(p.testtype == t for p in problems) for t in ("stdin", "functional", "script")}
     g.check("test types", sum(tt.values()) == len(problems), json.dumps(tt))
-    nofn = [p.id for p in problems if p.testtype == "functional" and not p.func_name]
+    nofn = [p.id for p in problems if p.testtype in ("functional", "script") and not p.func_name]
     g.check("functional problems have func_name", not nofn, f"missing: {nofn[:10]}")
     leaks = []
     for p in problems:
@@ -118,7 +129,7 @@ def gate_data(run_dir: Path, problems: Sequence[Problem], min_problems: int = 15
                for t in p.private):
             leaks.append(p.id)
     g.check("no private test input appears in any prompt", not leaks, f"leaks: {leaks[:10]}")
-    dates = sorted(p.contest_date for p in problems)
+    dates = sorted(p.contest_date for p in problems if p.benchmark == "livecodebench")
     g.check(f"all dates >= {config.SINCE}", not dates or dates[0] >= config.SINCE,
             f"{dates[0] if dates else '-'} .. {dates[-1] if dates else '-'}")
     _save(run_dir, g)
@@ -134,6 +145,15 @@ def gate_exec(run_dir: Path) -> Gate:
         g.check(f"reference passes: {p.id}", all(r.passed for r in good), str([r.status for r in good]))
         bad = run_tests(sols[p.id]["bad"], tests, p.func_name, 2.0, stop_on_fail=True)
         g.check(f"wrong solution fails: {p.id}", not all(r.passed for r in bad), str([r.status for r in bad]))
+    for line in (FIXTURES / "mbpp_rows.jsonl").read_text(encoding="utf-8").splitlines():
+        row = json.loads(line)
+        p = mbpp_row_to_problem(row)
+        good = run_tests(row["code"], p.public + p.private, p.func_name, config.TIMEOUT_HARD_S)
+        g.check(f"MBPP+ canonical passes: {p.id}", all(r.passed for r in good), str([r.status for r in good]))
+        if p.id in sols:
+            bad = run_tests(sols[p.id]["bad"], p.public + p.private, p.func_name, 2.0)
+            g.check(f"MBPP+ wrong solution: passes example, fails hidden: {p.id}",
+                    bad[0].passed and not all(r.passed for r in bad), str([r.status for r in bad]))
     t0 = time.time()
     r = run_tests("while True:\n    pass\n", load_problems(FIXTURES / "problems.jsonl")[0].public, None, 1.0)
     g.check("timeout kills runaway code", r[0].status == "timeout" and time.time() - t0 < 10,
@@ -228,7 +248,7 @@ def gate_post(run_dir: Path, problems: Sequence[Problem], cfgs: Sequence[ModelCo
                     f"{acc:.3f} vs {slm_best:.3f}", flag_only=True)
             g.check(f"{cfg.name}: accuracy > 0.2 (else suspect harness)", acc > 0.2, f"{acc:.3f}",
                     flag_only=True)
-            for tt in ("stdin", "functional"):
+            for tt in ("stdin", "functional", "script"):
                 sub = [ok for pid, ok in v.items() if pmap[pid].testtype == tt]
                 if sub:
                     g.check(f"{cfg.name}: solves some {tt} problems", any(sub),

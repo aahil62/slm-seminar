@@ -5,7 +5,9 @@ import base64
 import io
 import json
 import pickle
+import random
 import re
+import time
 import urllib.error
 import urllib.request
 import zlib
@@ -36,6 +38,7 @@ class Problem:
     func_name: Optional[str]
     public: list[Test]
     private: list[Test]
+    benchmark: str = "livecodebench"
 
     @property
     def testtype(self) -> str:
@@ -133,3 +136,70 @@ def load_problems(path: Path | str) -> list[Problem]:
                 d["private"] = [Test(**t) for t in d["private"]]
                 out.append(Problem(**d))
     return out
+
+
+# ---- MBPP+ (EvalPlus) -------------------------------------------------------------------------
+
+def download_mbpp(dest_dir: Path | str) -> Path:
+    """Fetch all MBPP+ rows as JSONL via the HF datasets-server rows API (no parquet dependency)."""
+    path = Path(dest_dir) / "mbppplus.jsonl"
+    if path.exists():
+        return path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows, offset = [], 0
+    while True:
+        for attempt in range(5):  # the rows API occasionally returns an empty body
+            try:
+                with urllib.request.urlopen(config.MBPP_ROWS_URL.format(offset=offset), timeout=120) as r:
+                    d = json.loads(r.read())
+                break
+            except (OSError, ValueError):
+                if attempt == 4:
+                    raise
+                time.sleep(5 * (attempt + 1))
+        batch = [x["row"] for x in d["rows"]]
+        rows += batch
+        offset += len(batch)
+        if not batch or offset >= d["num_rows_total"]:
+            break
+    tmp = path.with_suffix(".part")
+    tmp.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+    tmp.replace(path)
+    return path
+
+
+def _mbpp_entry_point(row: dict) -> Optional[str]:
+    m = re.search(r"assertion\((\w+)\(\*inp\)", row.get("test", ""))
+    if m:
+        return m.group(1)
+    m = re.search(r"assert\s+(?:\w+\()?\s*(\w+)\(", (row.get("test_list") or [""])[0])
+    return m.group(1) if m else None
+
+
+def mbpp_row_to_problem(row: dict) -> Problem:
+    imports = "\n".join(row.get("test_imports") or [])
+    pre = (imports + "\n") if imports else ""
+    tl = list(row["test_list"])
+    return Problem(
+        id=f"mbpp/{row['task_id']}", title="", content=row["prompt"].strip(), platform="mbppplus",
+        contest_date="2021-01-01", difficulty="easy", starter_code="",
+        func_name=_mbpp_entry_point(row),
+        public=[Test(pre + tl[0], "", "script")],
+        private=[Test(pre + t, "", "script") for t in tl[1:]] + [Test(pre + row["test"], "", "script")],
+        benchmark="mbppplus",
+    )
+
+
+def build_mbpp_problem_file(raw_path: Path | str, out_path: Path | str,
+                            n: int = config.MBPP_SAMPLE, seed: int = config.MBPP_SEED) -> int:
+    rows = [json.loads(l) for l in Path(raw_path).read_text(encoding="utf-8").splitlines() if l.strip()]
+    rows = [r for r in rows if int(r["task_id"]) not in config.MBPP_EXCLUDE]
+    rows.sort(key=lambda r: int(r["task_id"]))
+    if n and n < len(rows):
+        rows = sorted(random.Random(seed).sample(rows, n), key=lambda r: int(r["task_id"]))
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(asdict(mbpp_row_to_problem(r))) + "\n")
+    return len(rows)

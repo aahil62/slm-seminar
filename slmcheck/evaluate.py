@@ -61,6 +61,25 @@ def evaluate(run_dir: Path | str, problems: Sequence[Problem]) -> int:
     return written
 
 
+def _probe_scripts(tests: list[Test]) -> list[Test]:
+    """For assert-style tests: scripts that print the value under test, so agreement between
+    samples (S4/S5) can be measured on outputs rather than on pass/fail."""
+    import ast
+    out = []
+    for t in tests:
+        try:
+            mod = ast.parse(t.input)
+        except SyntaxError:
+            continue
+        setup = [n for n in mod.body if isinstance(n, (ast.Import, ast.ImportFrom))]
+        for node in mod.body:
+            if isinstance(node, ast.Assert) and isinstance(node.test, ast.Compare):
+                expr = ast.unparse(node.test.left)
+                pre = "".join(ast.unparse(n) + "\n" for n in setup)
+                out.append(Test(pre + f"print(repr({expr}))", "", "script"))
+    return out
+
+
 _KIND = {"fail": "wrong_answer", "error": "runtime_error", "timeout": "timeout"}
 
 
@@ -70,14 +89,16 @@ def _execute(code: str, p: Problem, selftests: list[Test]) -> dict:
     if not code.strip():
         return {"hidden_pass": False, "fail_kind": "empty", "public": [False] * len(p.public),
                 "self": [False] * len(selftests), "sig": None}
-    probe = list(p.public) + list(selftests)
-    ran = run_tests(code, probe, p.func_name, timeout, expect_outputs=False)
+    checks = list(p.public) + list(selftests)
+    extra = _probe_scripts(checks) if p.testtype == "script" else []
+    ran = run_tests(code, checks + extra, p.func_name, timeout, expect_outputs=False)
     got = [r.got if r.status == "ran" else None for r in ran]
     public = [outputs_equal(t.output, g, t.testtype) for t, g in zip(p.public, got)]
     self_ = [outputs_equal(t.output, g, t.testtype) for t, g in zip(selftests, got[len(p.public):])]
+    sig_got = got[len(checks):] if extra else got
     sig = None
-    if any(g is not None for g in got):
-        norm = [" ".join(g.split()) if g is not None else "<none>" for g in got]
+    if any(g is not None for g in sig_got):
+        norm = [" ".join(g.split()) if g is not None else "<none>" for g in sig_got]
         sig = hashlib.sha256(json.dumps(norm).encode()).hexdigest()[:16]
     fail_kind = None
     bad_public = next((r for r, ok in zip(ran, public) if not ok), None)
