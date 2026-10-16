@@ -49,7 +49,7 @@ def evaluate(run_dir: Path | str, problems: Sequence[Problem]) -> int:
             ckey = (hashlib.sha256(s["code"].encode()).hexdigest(), p.id, s["cfg"])
             if ckey not in cache:
                 cache[ckey] = _execute(s["code"], p, st)
-            row = {"cfg": s["cfg"], "problem_id": p.id, "sample_idx": s["sample_idx"],
+            row = {"cfg": s["cfg"], "tier": s.get("tier", "slm"), "problem_id": p.id, "sample_idx": s["sample_idx"],
                    "difficulty": p.difficulty, "empty": not s["code"].strip(), **cache[ckey]}
             ef.write(json.dumps(row) + "\n")
             ef.flush()

@@ -89,7 +89,7 @@ def generate(run_dir: Path | str, problems: Sequence[Problem], cfgs: Sequence[Mo
                 seed = seed_for(p.id, i)
                 comp, err = _call(backend, prompts.codegen_messages(p), temp, top_p, seed,
                                   cfg.max_tokens, log)
-                rec = {"cfg": cfg.name, "problem_id": p.id, "sample_idx": i, "temperature": temp,
+                rec = {"cfg": cfg.name, "tier": cfg.tier, "problem_id": p.id, "sample_idx": i, "temperature": temp,
                        "seed": seed, "code": prompts.extract_code(comp.text) if comp else "",
                        "raw_text": comp.text if comp else "",
                        "thinking_chars": len(comp.thinking) if comp else 0,
