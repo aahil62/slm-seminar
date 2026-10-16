@@ -55,7 +55,7 @@ def run_tests(code: str, tests: Sequence[Test], func_name: Optional[str], timeou
     kwargs = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" \
         else {"start_new_session": True}
     results: dict[int, TestResult] = {}
-    with tempfile.TemporaryDirectory(prefix="slmcheck_") as tmp:
+    with tempfile.TemporaryDirectory(prefix="slmcheck_", ignore_cleanup_errors=True) as tmp:
         proc = subprocess.Popen([sys.executable, "-I", DRIVER], stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=tmp,
                                 **kwargs)

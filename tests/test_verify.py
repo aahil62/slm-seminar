@@ -48,3 +48,12 @@ def test_cli_backend_gate_with_fake(tmp_path):
     from slmcheck import verify as v
     g = v.gate_backend(tmp_path, load_problems(FIX), FAKE_CONFIGS, backend_factory=fake_factory)
     assert g.status == "PASS"
+
+
+def test_backend_gate_detects_think_mode_not_applied(tmp_path):
+    from slmcheck.backends import FakeBackend
+    from slmcheck.config import ModelConfig
+    cfg = ModelConfig("t", "fake", "fake", k=1, think=False)
+    leaky = lambda c: FakeBackend(lambda m, s: "<think>hmm</think>\n```python\nprint(1)\n```")
+    g = verify.gate_backend(tmp_path, load_problems(FIX), [cfg], backend_factory=leaky)
+    assert any(c["name"] == "t: thinking is OFF" and c["status"] == "FAIL" for c in g.checks)

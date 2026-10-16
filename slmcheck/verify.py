@@ -149,11 +149,12 @@ def gate_backend(run_dir: Path, problems: Sequence[Problem], cfgs: Sequence[Mode
     for cfg in cfgs:
         try:
             b = backend_factory(cfg)
-            parsed, toks, secs = 0, 0, 0.0
+            parsed, toks, secs, thought = 0, 0, 0.0, 0
             for p in probe:
                 c = b.complete(prompts.codegen_messages(p), 0.0, 1.0, seed_for(p.id, 0), cfg.max_tokens)
                 code = prompts.extract_code(c.text)
                 toks, secs = toks + c.completion_tokens, secs + c.wall_s
+                thought += bool(c.thinking.strip()) or "<think>" in c.text
                 try:
                     ast.parse(code)
                     parsed += bool(code.strip())
@@ -162,6 +163,12 @@ def gate_backend(run_dir: Path, problems: Sequence[Problem], cfgs: Sequence[Mode
             g.check(f"{cfg.name} returns parsable code", parsed >= 1,
                     f"{parsed}/{len(probe)} parsable; {toks} tokens in {secs:.1f}s "
                     f"({toks / secs if secs else 0:.1f} tok/s)")
+            if cfg.think is True:
+                g.check(f"{cfg.name}: thinking is ON", thought == len(probe),
+                        f"{thought}/{len(probe)} replies contained reasoning (update Ollama if 0)")
+            elif cfg.think is False:
+                g.check(f"{cfg.name}: thinking is OFF", thought == 0,
+                        f"{thought}/{len(probe)} replies contained reasoning (update Ollama if >0)")
         except Exception as e:  # noqa: BLE001 - report any backend failure as evidence
             g.check(f"{cfg.name} returns parsable code", False, f"{type(e).__name__}: {str(e)[:200]}")
     _save(run_dir, g)
