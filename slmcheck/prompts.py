@@ -1,0 +1,78 @@
+"""Prompts (LiveCodeBench-style) and parsing of model replies."""
+from __future__ import annotations
+
+import json
+import re
+
+from .dataset import Problem, Test
+
+SYSTEM = ("You are an expert Python programmer. You will be given a programming problem and must "
+          "write a correct and efficient Python 3 program that solves it.")
+
+_STDIN_FORMAT = ("Read the inputs from stdin, solve the problem and write the answer to stdout "
+                 "(do not directly test on the sample inputs). Enclose your code within delimiters "
+                 "as follows.\n```python\n# YOUR CODE HERE\n```")
+_FUNC_FORMAT = ("You will use the following starter code to write the solution to the problem and "
+                "enclose your code within delimiters.\n```python\n{starter}\n```")
+
+
+def codegen_messages(p: Problem) -> list[dict]:
+    fmt = _FUNC_FORMAT.format(starter=p.starter_code.rstrip()) if p.testtype == "functional" else _STDIN_FORMAT
+    user = (f"### Question:\n{p.content}\n\n### Format: {fmt}\n\n"
+            "### Answer: (use the provided format with backticks)\n")
+    return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
+
+
+def selftest_messages(p: Problem, n: int = 5) -> list[dict]:
+    ex = p.public[0]
+    if p.testtype == "functional":
+        how = ("Each \"input\" is the function arguments, one JSON value per line, exactly like the "
+               "example; each \"output\" is the JSON return value.")
+    else:
+        how = "Each \"input\" is the full stdin text and each \"output\" is the exact expected stdout."
+    user = (f"### Question:\n{p.content}\n\n"
+            f"Write {n} NEW test cases for this problem (different from the examples), including edge "
+            f"cases. {how}\nExample in the required format:\n"
+            f"```json\n{json.dumps([{'input': ex.input, 'output': ex.output}], indent=1)}\n```\n"
+            f"Compute each expected output carefully. Reply with only one JSON array of {n} objects "
+            "with keys \"input\" and \"output\", inside a ```json block.")
+    return [{"role": "system", "content": "You are a careful software tester."},
+            {"role": "user", "content": user}]
+
+
+_THINK = re.compile(r"<think>.*?</think>", re.S)
+_FENCE = re.compile(r"```([A-Za-z0-9_+-]*)[ \t]*\n(.*?)```", re.S)
+
+
+def extract_code(text: str) -> str:
+    text = _THINK.sub("", text or "")
+    blocks = _FENCE.findall(text)
+    py = [b for lang, b in blocks if lang.lower() in ("python", "python3", "py")]
+    chosen = py or [b for lang, b in blocks if lang == ""]
+    return (chosen[-1] if chosen else text).strip()
+
+
+def _as_text(v) -> str:
+    return v if isinstance(v, str) else json.dumps(v)
+
+
+def parse_selftests(text: str, testtype: str) -> list[Test]:
+    text = _THINK.sub("", text or "")
+    candidates = [b for _, b in _FENCE.findall(text)] + [text]
+    for c in candidates:
+        start, end = c.find("["), c.rfind("]")
+        if start < 0 or end <= start:
+            continue
+        try:
+            items = json.loads(c[start:end + 1])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(items, list):
+            continue
+        out = []
+        for it in items:
+            if isinstance(it, dict) and "input" in it and "output" in it \
+                    and isinstance(it["input"], str):
+                out.append(Test(it["input"], _as_text(it["output"]), testtype))
+        return out
+    return []
