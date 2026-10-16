@@ -18,6 +18,7 @@ from . import config
 
 @dataclass(frozen=True)
 class Test:
+    __test__ = False  # not a pytest class
     input: str
     output: str
     testtype: str  # "stdin" | "functional"
