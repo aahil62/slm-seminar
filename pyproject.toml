@@ -1,0 +1,13 @@
+[project]
+name = "slmcheck"
+version = "0.1.0"
+description = "Local SLMs vs cloud LLMs under realistic answer checkers (LiveCodeBench)"
+requires-python = ">=3.11"
+dependencies = ["matplotlib>=3.7"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
