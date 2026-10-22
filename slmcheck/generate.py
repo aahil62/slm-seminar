@@ -25,6 +25,24 @@ def _repair_tail(path: Path) -> None:
             path.write_bytes(data[: data.rfind(b"\n") + 1])
 
 
+def _drop_error_rows(path: Path) -> int:
+    """Remove rows recorded as backend errors (no model output) so a rerun regenerates them."""
+    if not path.exists() or not path.stat().st_size:
+        return 0
+    keep, dropped = [], 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            if json.loads(line).get("error"):
+                dropped += 1
+                continue
+        except json.JSONDecodeError:
+            pass
+        keep.append(line)
+    if dropped:
+        path.write_text("".join(line + "\n" for line in keep), encoding="utf-8")
+    return dropped
+
+
 def _keys(path: Path, fields: Sequence[str]) -> set:
     out = set()
     if path.exists():
@@ -92,6 +110,8 @@ def generate(run_dir: Path | str, problems: Sequence[Problem], cfgs: Sequence[Mo
             samples_p, selftests_p = samples_path(run, cfg.name), selftests_path(run, cfg.name)
             for p in (samples_p, selftests_p):
                 _repair_tail(p)
+                if _drop_error_rows(p):
+                    log(f"{cfg.name}: dropped error rows in {p.name}; they will be regenerated")
             done = _keys(samples_p, ("cfg", "problem_id", "sample_idx"))
             done_st = _keys(selftests_p, ("cfg", "problem_id"))
             todo = [(p, i) for p in probs for i in range(cfg.k) if (cfg.name, p.id, i) not in done]

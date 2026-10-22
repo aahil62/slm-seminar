@@ -77,6 +77,22 @@ def test_backend_error_recorded_not_fatal(tmp_path, monkeypatch):
     assert row["error"] and row["code"] == ""
 
 
+def test_error_rows_are_regenerated_on_rerun(tmp_path, monkeypatch):
+    monkeypatch.setattr(generate.time, "sleep", lambda s: None)
+
+    def bad(cfg):
+        def script(m, s):
+            raise backends.BackendError("ollama down")
+        return backends.FakeBackend(script)
+
+    probs = load_problems(FIX)[:1]
+    generate.generate(tmp_path, probs, [LLM], backend_factory=bad)
+    assert generate.load_all(tmp_path, "samples")[0]["error"]
+    generate.generate(tmp_path, probs, [LLM], backend_factory=factory())
+    rows = generate.load_all(tmp_path, "samples")
+    assert len(rows) == 1 and not rows[0]["error"] and rows[0]["code"] == "print(1)"
+
+
 def test_selftests_written_once_per_slm_problem(tmp_path):
     probs = load_problems(FIX)
     generate.generate(tmp_path, probs, [SLM, LLM], backend_factory=factory())
