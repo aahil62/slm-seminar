@@ -49,7 +49,7 @@ SLM_CONFIGS = [
     # "qwen3:4b" now resolves to Qwen3-4B-Thinking-2507, which cannot turn thinking off. The explicit tag
     # below is the original hybrid Qwen3-4B (40K context) where think=False/True works (see VERIFICATION_NOTES).
     ModelConfig("qwen3-4b-nothink", "ollama", "qwen3:4b-q4_K_M", k=5, think=False),
-    ModelConfig("qwen3-4b-think", "ollama", "qwen3:4b-q4_K_M", k=2, think=True, max_tokens=8192),
+    ModelConfig("qwen3-4b-think", "ollama", "qwen3:4b-q4_K_M", k=1, think=True, max_tokens=8192),
 ]
 
 LLM_CONFIGS = [
