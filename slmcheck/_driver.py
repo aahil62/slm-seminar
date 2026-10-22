@@ -16,6 +16,7 @@ OUTPUT_CAP = 1 << 20
 
 HEADER = ("from typing import *\nfrom collections import *\nfrom itertools import *\n"
           "from functools import *\nfrom heapq import *\nfrom bisect import *\nfrom math import *\n"
+          "from builtins import *\n"  # math.pow would otherwise shadow the builtin pow(base, exp, mod)
           "import math, heapq, bisect, itertools, functools, collections, string, re, sys, random\n")
 
 

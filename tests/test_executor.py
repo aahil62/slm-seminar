@@ -126,3 +126,11 @@ def test_undeletable_temp_dir_does_not_abort_run(monkeypatch):
     t = Test("", "1\n", "stdin")
     res = executor.run_tests("print(1)\n", [t], None, 5.0)
     assert res[0].passed
+
+
+def test_three_argument_pow_is_not_shadowed_by_math_pow():
+    """Evidence: qwen3-4b-nothink arc192_e#1 and abc399_f#4 died with 'pow expected 2 arguments, got 3'
+    because the header's `from math import *` replaced the builtin pow."""
+    code = "print(pow(3, 200, 1000007))\n"
+    res = run_tests(code, [Test("", str(pow(3, 200, 1000007)) + "\n", "stdin")], None, 5.0)
+    assert res[0].passed, res
