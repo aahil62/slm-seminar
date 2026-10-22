@@ -33,15 +33,15 @@ def test_verify_post_gate_flags_missing_samples(tmp_path):
 def test_cli_all_on_fake_backend(tmp_path):
     run, out = tmp_path / "run", tmp_path / "bundle"
     assert main(["all", "--fake", "--run-dir", str(run), "--out", str(out)]) == 0
-    md = (out / "RESULTS.md").read_text()
+    md = (out / "RESULTS.md").read_text(encoding="utf-8")
     assert md.startswith("# FAKE — NOT RESULTS")
-    report = (run / "VERIFICATION_REPORT.md").read_text()
+    report = (run / "VERIFICATION_REPORT.md").read_text(encoding="utf-8")
     assert "## post:" in report and "## data: PASS" in report and "## exec: PASS" in report
     assert (out / "VERIFICATION_REPORT.md").exists()
     # resumable: a second run regenerates nothing
-    before = sorted((run).glob("samples__*.jsonl")); before = [p.read_text() for p in before]
+    before = sorted((run).glob("samples__*.jsonl")); before = [p.read_text(encoding="utf-8") for p in before]
     assert main(["all", "--fake", "--run-dir", str(run), "--out", str(out)]) == 0
-    assert [p.read_text() for p in sorted(run.glob("samples__*.jsonl"))] == before
+    assert [p.read_text(encoding="utf-8") for p in sorted(run.glob("samples__*.jsonl"))] == before
 
 
 def test_cli_backend_gate_with_fake(tmp_path):

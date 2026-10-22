@@ -31,7 +31,7 @@ def test_report_writes_all_files_from_fixture_run(tmp_path):
     for name in ["accuracy_by_strategy", "gap_recovered", "false_pass", "silent_bugs", "cascade", "mcnemar", "cost"]:
         assert (out / "tables" / f"{name}.csv").stat().st_size > 50
     assert (out / "figures" / "fig_cascade_llm1.png").exists()
-    md = (out / "RESULTS.md").read_text()
+    md = (out / "RESULTS.md").read_text(encoding="utf-8")
     assert md.startswith("# FAKE — NOT RESULTS")
-    meta = json.loads((out / "run_metadata.json").read_text())
+    meta = json.loads((out / "run_metadata.json").read_text(encoding="utf-8"))
     assert meta["fake"] and meta["n_problems"] == 4
