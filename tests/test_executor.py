@@ -109,3 +109,20 @@ def test_script_mode_collects_printed_output():
     code = "def sq(x):\n    return x * x\n"
     r = run_tests(code, [Test("print(repr(sq(3)))", "", "script")], "sq", 5, expect_outputs=False)
     assert r[0].status == "ran" and r[0].got.strip() == "9"
+
+
+def test_undeletable_temp_dir_does_not_abort_run(monkeypatch):
+    """Windows can keep a just-killed process's cwd locked; cleanup failure must not raise."""
+    import shutil
+    from slmcheck import executor
+
+    def locked(path, *a, **k):
+        if k.get("ignore_errors"):
+            return
+        raise PermissionError(32, "being used by another process")
+
+    monkeypatch.setattr(executor.shutil, "rmtree", locked)
+    monkeypatch.setattr(executor.time, "sleep", lambda s: None)
+    t = Test("", "1\n", "stdin")
+    res = executor.run_tests("print(1)\n", [t], None, 5.0)
+    assert res[0].passed

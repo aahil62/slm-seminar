@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import shutil
 import signal
 import subprocess
 import sys
@@ -42,6 +43,20 @@ def _kill_tree(proc: subprocess.Popen) -> None:
     proc.kill()
 
 
+def _remove_dir(path: str) -> None:
+    """Best-effort cleanup. On Windows a just-killed process (or a scanner) can still hold the
+    directory for a moment; a leftover empty temp dir must never abort an evaluation run."""
+    for attempt in range(5):
+        try:
+            shutil.rmtree(path)
+            return
+        except FileNotFoundError:
+            return
+        except OSError:
+            time.sleep(0.2 * (attempt + 1))
+    shutil.rmtree(path, ignore_errors=True)
+
+
 def run_tests(code: str, tests: Sequence[Test], func_name: Optional[str], timeout_s: float,
               stop_on_fail: bool = False, expect_outputs: bool = True) -> list[TestResult]:
     """Return one TestResult per test. With expect_outputs=False, only collects outputs ("ran")."""
@@ -55,7 +70,8 @@ def run_tests(code: str, tests: Sequence[Test], func_name: Optional[str], timeou
     kwargs = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" \
         else {"start_new_session": True}
     results: dict[int, TestResult] = {}
-    with tempfile.TemporaryDirectory(prefix="slmcheck_", ignore_cleanup_errors=True) as tmp:
+    tmp = tempfile.mkdtemp(prefix="slmcheck_")
+    try:
         proc = subprocess.Popen([sys.executable, "-I", DRIVER], stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=tmp,
                                 **kwargs)
@@ -97,4 +113,6 @@ def run_tests(code: str, tests: Sequence[Test], func_name: Optional[str], timeou
         except subprocess.TimeoutExpired:
             _kill_tree(proc)
             proc.wait()
+    finally:
+        _remove_dir(tmp)
     return [results.get(i, TestResult(False, "timeout")) for i in range(len(tests))]
