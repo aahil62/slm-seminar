@@ -1,6 +1,7 @@
 """Fixed experiment settings. Values come from the design doc (sections 4-6)."""
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import Literal, Optional
 
@@ -25,7 +26,7 @@ N_SELFTESTS = 5
 TAUS = [0.6, 0.8, 1.0]
 PRIMARY_TAU = 1.0
 
-OLLAMA_URL = "http://localhost:11434"
+OLLAMA_URL = os.environ.get("SLMCHECK_OLLAMA_URL", "http://localhost:11434")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
@@ -45,8 +46,10 @@ SLM_CONFIGS = [
     ModelConfig("qwen2.5-coder-1.5b", "ollama", "qwen2.5-coder:1.5b", k=5),
     ModelConfig("qwen2.5-coder-7b", "ollama", "qwen2.5-coder:7b", k=5),
     ModelConfig("deepseek-coder-6.7b", "ollama", "deepseek-coder:6.7b", k=5),
-    ModelConfig("qwen3-4b-nothink", "ollama", "qwen3:4b", k=5, think=False),
-    ModelConfig("qwen3-4b-think", "ollama", "qwen3:4b", k=2, think=True, max_tokens=8192),
+    # "qwen3:4b" now resolves to Qwen3-4B-Thinking-2507, which cannot turn thinking off. The explicit tag
+    # below is the original hybrid Qwen3-4B (40K context) where think=False/True works (see VERIFICATION_NOTES).
+    ModelConfig("qwen3-4b-nothink", "ollama", "qwen3:4b-q4_K_M", k=5, think=False),
+    ModelConfig("qwen3-4b-think", "ollama", "qwen3:4b-q4_K_M", k=2, think=True, max_tokens=8192),
 ]
 
 LLM_CONFIGS = [
