@@ -130,7 +130,8 @@ def main(argv=None) -> int:
         print(generate.generate(run, probs, cfgs, limit=a.limit, **kw))
         return 0
     if a.command == "evaluate":
-        print(f"{evaluate.evaluate(run, probs)} new exec rows")
+        names = [c.name for c in cfgs] if a.cfg else None
+        print(f"{evaluate.evaluate(run, probs, names)} new exec rows")
         return 0
     if a.command == "report":
         print(report.report(run, out))

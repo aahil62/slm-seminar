@@ -5,7 +5,7 @@ import hashlib
 import json
 import time
 from pathlib import Path
-from typing import Sequence
+from typing import Optional, Sequence
 
 from . import config
 from .dataset import Problem, Test
@@ -25,8 +25,10 @@ def _load(path: Path) -> list[dict]:
     return out
 
 
-def evaluate(run_dir: Path | str, problems: Sequence[Problem]) -> int:
-    """Append one row per sample to exec.jsonl; resumable. Returns rows written this call."""
+def evaluate(run_dir: Path | str, problems: Sequence[Problem], cfg_names: Optional[Sequence[str]] = None) -> int:
+    """Append one row per sample to exec.jsonl; resumable. Returns rows written this call.
+    cfg_names restricts to configs whose generation (samples and self-tests) is complete, so a
+    sample is never executed before its self-tests exist."""
     run = Path(run_dir)
     pmap = {p.id: p for p in problems}
     selftests = {(r["cfg"], r["problem_id"]): [Test(t["input"], t["output"], pmap[r["problem_id"]].testtype)
@@ -39,7 +41,8 @@ def evaluate(run_dir: Path | str, problems: Sequence[Problem]) -> int:
     written = 0
     with open(exec_p, "a", encoding="utf-8") as ef, \
             open(run / "progress.log", "a", encoding="utf-8") as logf:
-        samples = [s for s in load_all(run, "samples") if s["problem_id"] in pmap]
+        samples = [s for s in load_all(run, "samples") if s["problem_id"] in pmap
+                   and (cfg_names is None or s["cfg"] in cfg_names)]
         for n, s in enumerate(samples, 1):
             key = (s["cfg"], s["problem_id"], s["sample_idx"])
             if key in done:

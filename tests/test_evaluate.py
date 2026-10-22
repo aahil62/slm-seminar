@@ -11,6 +11,14 @@ def _write(path, rows):
     path.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
 
 
+def test_evaluate_can_be_limited_to_finished_configs(tmp_path):
+    probs = load_problems(FIX)[:1]
+    rows = [{"cfg": c, "problem_id": probs[0].id, "sample_idx": 0, "code": "print(1)"} for c in ("a", "b")]
+    _write(tmp_path / "samples__ab.jsonl", rows)
+    assert evaluate.evaluate(tmp_path, probs, ["a"]) == 1
+    assert evaluate.evaluate(tmp_path, probs) == 1  # the other config is picked up later
+
+
 def test_evaluate_end_to_end_on_fixtures(tmp_path):
     probs = load_problems(FIX)
     samples, selftests = [], []
