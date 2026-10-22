@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 import zlib
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from itertools import islice
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
@@ -92,6 +95,27 @@ def load_all(run: Path | str, kind: str) -> list[dict]:
     return rows
 
 
+def _map_ordered(fn, items, workers: int):
+    """Yield fn(item) as each finishes. workers > 1 keeps that many requests in flight (a slow item
+    never idles the others; a crash loses at most `workers` results); workers == 1 is a plain loop
+    in input order."""
+    items = list(items)
+    if workers <= 1:
+        for it in items:
+            yield fn(it)
+        return
+    it = iter(items)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending = {pool.submit(fn, x) for x in islice(it, workers)}
+        while pending:
+            done, pending = wait(pending, return_when=FIRST_COMPLETED)
+            for f in done:
+                nxt = next(it, None)
+                if nxt is not None:
+                    pending.add(pool.submit(fn, nxt))
+                yield f.result()
+
+
 def generate(run_dir: Path | str, problems: Sequence[Problem], cfgs: Sequence[ModelConfig],
              backend_factory: Callable[[ModelConfig], Backend] = make_backend,
              limit: Optional[int] = None) -> dict[str, int]:
@@ -122,42 +146,50 @@ def generate(run_dir: Path | str, problems: Sequence[Problem], cfgs: Sequence[Mo
                 continue
             log(f"start {cfg.name}: {len(todo)} samples to generate")
             backend = backend_factory(cfg)
+            workers = max(1, int(os.environ.get("SLMCHECK_PARALLEL", "1"))) if cfg.tier == "slm" else 1
+
+            def make_sample(item, cfg=cfg):
+                p, i = item
+                temp = 0.0 if i == 0 else config.SAMPLE_TEMPERATURE
+                top_p = 1.0 if i == 0 else config.SAMPLE_TOP_P
+                seed = seed_for(p.id, i)
+                comp, err = _call(backend, prompts.codegen_messages(p), temp, top_p, seed,
+                                  cfg.max_tokens, log)
+                return {"cfg": cfg.name, "tier": cfg.tier, "problem_id": p.id, "sample_idx": i,
+                        "temperature": temp, "seed": seed,
+                        "code": prompts.extract_code(comp.text) if comp else "",
+                        "raw_text": comp.text if comp else "",
+                        "thinking_chars": len(comp.thinking) if comp else 0,
+                        "prompt_tokens": comp.prompt_tokens if comp else 0,
+                        "completion_tokens": comp.completion_tokens if comp else 0,
+                        "wall_s": round(comp.wall_s, 3) if comp else 0.0,
+                        "model_digest": comp.model_digest if comp else None,
+                        "workers": workers, "error": err, "ts": time.time()}
+
             with open(samples_p, "a", encoding="utf-8") as sf:
-                for n, (p, i) in enumerate(todo, 1):
-                    temp = 0.0 if i == 0 else config.SAMPLE_TEMPERATURE
-                    top_p = 1.0 if i == 0 else config.SAMPLE_TOP_P
-                    seed = seed_for(p.id, i)
-                    comp, err = _call(backend, prompts.codegen_messages(p), temp, top_p, seed,
-                                      cfg.max_tokens, log)
-                    rec = {"cfg": cfg.name, "tier": cfg.tier, "problem_id": p.id, "sample_idx": i,
-                           "temperature": temp, "seed": seed,
-                           "code": prompts.extract_code(comp.text) if comp else "",
-                           "raw_text": comp.text if comp else "",
-                           "thinking_chars": len(comp.thinking) if comp else 0,
-                           "prompt_tokens": comp.prompt_tokens if comp else 0,
-                           "completion_tokens": comp.completion_tokens if comp else 0,
-                           "wall_s": round(comp.wall_s, 3) if comp else 0.0,
-                           "model_digest": comp.model_digest if comp else None,
-                           "error": err, "ts": time.time()}
+                for n, rec in enumerate(_map_ordered(make_sample, todo, workers), 1):
                     sf.write(json.dumps(rec) + "\n")
                     sf.flush()
                     counts[cfg.name] += 1
-                    log(f"{cfg.name} {p.id} #{i} ({n}/{len(todo)}) tok={rec['completion_tokens']} "
-                        f"wall={rec['wall_s']}s{' ERROR ' + err if err else ''}")
+                    err = rec["error"]
+                    log(f"{cfg.name} {rec['problem_id']} #{rec['sample_idx']} ({n}/{len(todo)}) "
+                        f"tok={rec['completion_tokens']} wall={rec['wall_s']}s"
+                        f"{' ERROR ' + err if err else ''}")
             if cfg.tier == "slm":
+                def make_selftest(p, cfg=cfg):
+                    comp, err = _call(backend, prompts.selftest_messages(p, config.N_SELFTESTS),
+                                      0.0, 1.0, seed_for(p.id, 99), cfg.max_tokens, log)
+                    tests = prompts.parse_selftests(comp.text, p.testtype) if comp else []
+                    return {"cfg": cfg.name, "problem_id": p.id,
+                            "tests": [{"input": t.input, "output": t.output} for t in tests],
+                            "raw_text": comp.text if comp else "", "error": err,
+                            "wall_s": round(comp.wall_s, 3) if comp else 0.0}
+
                 with open(selftests_p, "a", encoding="utf-8") as tf:
-                    for p in probs:
-                        if (cfg.name, p.id) in done_st:
-                            continue
-                        comp, err = _call(backend, prompts.selftest_messages(p, config.N_SELFTESTS),
-                                          0.0, 1.0, seed_for(p.id, 99), cfg.max_tokens, log)
-                        tests = prompts.parse_selftests(comp.text, p.testtype) if comp else []
-                        tf.write(json.dumps({"cfg": cfg.name, "problem_id": p.id,
-                                             "tests": [{"input": t.input, "output": t.output}
-                                                       for t in tests],
-                                             "raw_text": comp.text if comp else "", "error": err,
-                                             "wall_s": round(comp.wall_s, 3) if comp else 0.0}) + "\n")
+                    todo_st = [p for p in probs if (cfg.name, p.id) not in done_st]
+                    for rec in _map_ordered(make_selftest, todo_st, workers):
+                        tf.write(json.dumps(rec) + "\n")
                         tf.flush()
-                        done_st.add((cfg.name, p.id))
+                        done_st.add((cfg.name, rec["problem_id"]))
             log(f"done {cfg.name}")
     return counts

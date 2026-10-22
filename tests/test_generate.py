@@ -77,6 +77,16 @@ def test_backend_error_recorded_not_fatal(tmp_path, monkeypatch):
     assert row["error"] and row["code"] == ""
 
 
+def test_parallel_workers_write_every_sample_once(tmp_path, monkeypatch):
+    monkeypatch.setenv("SLMCHECK_PARALLEL", "3")
+    probs = load_problems(FIX)
+    generate.generate(tmp_path, probs, [SLM], backend_factory=factory())
+    rows = generate.load_all(tmp_path, "samples")
+    keys = [(r["cfg"], r["problem_id"], r["sample_idx"]) for r in rows]
+    assert len(keys) == len(set(keys)) == 9 and {r["workers"] for r in rows} == {3}
+    assert len(generate.load_all(tmp_path, "selftests")) == 3
+
+
 def test_error_rows_are_regenerated_on_rerun(tmp_path, monkeypatch):
     monkeypatch.setattr(generate.time, "sleep", lambda s: None)
 
