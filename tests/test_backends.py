@@ -60,6 +60,18 @@ def test_groq_payload_and_parse(monkeypatch):
     assert c.text == "ok" and c.completion_tokens == 4
 
 
+def test_groq_sends_explicit_user_agent(monkeypatch):
+    """Evidence: runs/main gpt-oss-120b 3634#0 got HTTP 403 'error code: 1010' (Cloudflare blocks the
+    default Python-urllib agent)."""
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_secret_value")
+    body = json.dumps({"choices": [{"message": {"content": "ok"}}], "usage": {}}).encode()
+    op = StubOpener([(200, {}, body)])
+    cfg = ModelConfig("g", "groq", "openai/gpt-oss-120b", k=1, tier="llm")
+    backends.make_backend(cfg, opener=op).complete(MSG, 0.0, 1.0, 1, 10)
+    ua = op.requests[0].get_header("User-agent")
+    assert ua and not ua.startswith("Python-urllib")
+
+
 def test_groq_429_raises_rate_limited(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "gsk_secret_value")
     op = StubOpener([(429, {"retry-after": "17"}, b"{}")])

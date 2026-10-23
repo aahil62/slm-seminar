@@ -23,6 +23,9 @@ class Completion:
     model_digest: Optional[str] = None
 
 
+USER_AGENT = "slmcheck/0.1 (research harness; python urllib)"
+
+
 class BackendError(RuntimeError):
     pass
 
@@ -113,7 +116,9 @@ class GroqBackend:
         payload = {"model": self.cfg.model, "messages": messages, "temperature": temperature,
                    "top_p": top_p, "seed": seed, "max_completion_tokens": max_tokens,
                    **self.cfg.extra}
-        headers = {"Authorization": "Bearer " + os.environ["GROQ_API_KEY"]}
+        # Groq sits behind Cloudflare, which rejects urllib's default "Python-urllib/x.y" agent
+        # with HTTP 403 "error code: 1010"; send an explicit client name instead.
+        headers = {"Authorization": "Bearer " + os.environ["GROQ_API_KEY"], "User-Agent": USER_AGENT}
         t0 = time.time()
         for attempt in range(4):
             status, hdrs, body = _post(self.opener, config.GROQ_URL, payload, headers, 600)
