@@ -108,6 +108,19 @@ def test_deepinfra_uses_its_endpoint_key_and_max_tokens(monkeypatch):
     assert c.text == "ok" and c.completion_tokens == 6
 
 
+def test_sambanova_high_demand_429_is_waited_out(monkeypatch):
+    """Evidence: SambaNova answered 'Meta-Llama-3.3-70B-Instruct is currently experiencing high demand'
+    with HTTP 429 and no retry-after; it must be a RateLimited (retried), not a hard error."""
+    monkeypatch.setenv("SAMBANOVA_API_KEY", "sn_secret")
+    op = StubOpener([(429, {}, b'{"error":{"message":"high demand"}}')])
+    cfg = ModelConfig("l", "sambanova", "Meta-Llama-3.3-70B-Instruct", k=1, tier="llm")
+    b = backends.make_backend(cfg, opener=op)
+    with pytest.raises(backends.RateLimited) as e:
+        b.complete(MSG, 0.0, 1.0, 1, 1024)
+    assert e.value.retry_after_s == 60 and op.requests[0].full_url.startswith("https://api.sambanova.ai/")
+    assert json.loads(op.requests[0].data)["max_tokens"] == 1024 and "sn_secret" not in repr(b)
+
+
 def test_groq_missing_key(monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     cfg = ModelConfig("g", "groq", "llama-3.3-70b-versatile", k=1, tier="llm")

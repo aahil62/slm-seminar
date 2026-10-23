@@ -146,6 +146,12 @@ class DeepInfraBackend(GroqBackend):
     URL, KEY_ENV, LABEL, MAX_TOKENS_FIELD = config.DEEPINFRA_URL, "DEEPINFRA_API_KEY", "deepinfra", "max_tokens"
 
 
+class SambaNovaBackend(GroqBackend):
+    """Serves Llama-3.3-70B-Instruct (Groq: Enterprise-only; NVIDIA: retired 2026-08-26).
+    Its "high demand" refusals are HTTP 429, so generate waits them out like a rate limit."""
+    URL, KEY_ENV, LABEL, MAX_TOKENS_FIELD = config.SAMBANOVA_URL, "SAMBANOVA_API_KEY", "sambanova", "max_tokens"
+
+
 def make_backend(cfg: ModelConfig, opener: Opener = default_opener) -> Backend:
     if cfg.provider == "ollama":
         return OllamaBackend(cfg, opener)
@@ -153,4 +159,6 @@ def make_backend(cfg: ModelConfig, opener: Opener = default_opener) -> Backend:
         return GroqBackend(cfg, opener)
     if cfg.provider == "deepinfra":
         return DeepInfraBackend(cfg, opener)
+    if cfg.provider == "sambanova":
+        return SambaNovaBackend(cfg, opener)
     raise BackendError(f"no real backend for provider {cfg.provider!r}")
