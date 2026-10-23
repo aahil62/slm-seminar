@@ -121,6 +121,13 @@ def test_sambanova_high_demand_429_is_waited_out(monkeypatch):
     assert json.loads(op.requests[0].data)["max_tokens"] == 1024 and "sn_secret" not in repr(b)
 
 
+def test_second_cloud_model_is_deepseek_on_sambanova_with_frozen_settings():
+    from slmcheck import config
+    cfg = config.get_config("deepseek-v3.1")
+    assert (cfg.provider, cfg.model, cfg.k, cfg.max_tokens, cfg.tier) == ("sambanova", "DeepSeek-V3.1", 1, 1024, "llm")
+    assert not cfg.extra and "llama-3.3-70b" not in [c.name for c in config.LLM_CONFIGS]
+
+
 def test_groq_missing_key(monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     cfg = ModelConfig("g", "groq", "llama-3.3-70b-versatile", k=1, tier="llm")
