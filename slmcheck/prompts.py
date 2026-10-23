@@ -59,12 +59,39 @@ _THINK = re.compile(r"<think>.*?</think>", re.S)
 _FENCE = re.compile(r"```([A-Za-z0-9_+-]*)[ \t]*\n(.*?)```", re.S)
 
 
-def extract_code(text: str) -> str:
+_DEFINES = re.compile(r"^[ \t]*(def|class)[ \t]", re.M)
+
+
+def _is_program(block: str) -> bool:
+    """A block that is the solution itself: it defines something or reads stdin. Echoed example
+    asserts / usage snippets are not."""
+    return bool(_DEFINES.search(block)) or "input(" in block or "stdin" in block
+
+
+def _unpaired_fence(text: str) -> str | None:
+    """Exactly one fence line and no complete block: an unterminated opening fence (output cut off
+    or the closing fence never came) or a closing fence whose opening was never written."""
+    lines = text.split("\n")
+    fences = [i for i, ln in enumerate(lines) if ln.strip().startswith("```")]
+    if len(fences) != 1:
+        return None
+    i = fences[0]
+    tagged = len(lines[i].strip()) > 3
+    opening = tagged or not "".join(lines[:i]).strip()
+    return "\n".join(lines[i + 1:] if opening else lines[:i])
+
+
+def extract_code(text: str, prefer_program: bool = True) -> str:
+    """The model's final program. prefer_program=False takes the last fenced block as written
+    (used for self-test replies, where the asserts themselves are the payload)."""
     text = _THINK.sub("", text or "")
     blocks = _FENCE.findall(text)
     py = [b for lang, b in blocks if lang.lower() in ("python", "python3", "py")]
-    chosen = py or [b for lang, b in blocks if lang == ""]
-    return (chosen[-1] if chosen else text).strip()
+    pool = py or [b for lang, b in blocks if lang == ""]
+    if pool:
+        return ([b for b in pool if prefer_program and _is_program(b)] or pool)[-1].strip()
+    alone = _unpaired_fence(text)
+    return (alone if alone is not None else text).strip()
 
 
 def _as_text(v) -> str:
@@ -74,7 +101,7 @@ def _as_text(v) -> str:
 def _parse_assert_lines(text: str) -> list[Test]:
     import ast
     out = []
-    for line in extract_code(text).splitlines():
+    for line in extract_code(text, prefer_program=False).splitlines():
         line = line.strip()
         if not line.startswith("assert "):
             continue

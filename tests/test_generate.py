@@ -1,3 +1,4 @@
+import json
 from slmcheck import backends, generate
 from slmcheck.config import ModelConfig
 from slmcheck.dataset import load_problems
@@ -110,3 +111,17 @@ def test_selftests_written_once_per_slm_problem(tmp_path):
     st = generate.load_all(tmp_path, "selftests")
     assert len(st) == 3 and {r["cfg"] for r in st} == {"fake-slm"}
     assert st[0]["tests"] == [{"input": "1 1\n", "output": "2\n"}]
+
+
+def test_reextract_rewrites_code_from_raw_text_and_keeps_a_backup(tmp_path):
+    from slmcheck import reextract
+    raw = "```python\ndef f():\n    return 1\n```\n```python\nassert f() == 1\n```"
+    row = {"cfg": "m", "problem_id": "p", "sample_idx": 0, "raw_text": raw, "code": "assert f() == 1"}
+    ok = {"cfg": "m", "problem_id": "q", "sample_idx": 0, "raw_text": "print(1)", "code": "print(1)"}
+    p = tmp_path / "samples__m.jsonl"
+    p.write_text("".join(json.dumps(r) + "\n" for r in (row, ok)), encoding="utf-8")
+    assert reextract.reextract(tmp_path) == {"samples__m.jsonl": 1}
+    rows = [json.loads(l) for l in p.read_text(encoding="utf-8").splitlines()]
+    assert rows[0]["code"] == "def f():\n    return 1" and rows[0]["code_reextracted"] and "code_reextracted" not in rows[1]
+    assert (tmp_path / "_superseded" / "samples_before_reextract" / "samples__m.jsonl").exists()
+    assert reextract.reextract(tmp_path) == {"samples__m.jsonl": 0}
