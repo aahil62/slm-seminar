@@ -24,10 +24,17 @@ def load(bench):
 
 
 def pct(rows, cfg, strat, col="accuracy"):
+    # the CSVs store 4-decimal proportions; snap back to the exact count first so that e.g. 96/182 = 0.5275
+    # prints 52.7 and not 52.8 (false-pass rates are over the accepted count, not over n)
     r = rows.get((cfg, strat))
     if not r or r[col] == "":
         return "–"
-    return f"{100 * float(r[col]):.1f}"
+    v, n = float(r[col]), int(r["n"])
+    if col == "false_pass_rate":
+        n = round(float(r["accept_rate"]) * n)
+    if n:
+        v = round(v * n) / n
+    return f"{100 * v + 1e-9:.1f}"
 
 
 def main():
