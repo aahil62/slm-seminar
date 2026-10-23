@@ -28,12 +28,13 @@ PRIMARY_TAU = 1.0
 
 OLLAMA_URL = os.environ.get("SLMCHECK_OLLAMA_URL", "http://localhost:11434")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+DEEPINFRA_URL = "https://api.deepinfra.com/v1/openai/chat/completions"
 
 
 @dataclass(frozen=True)
 class ModelConfig:
     name: str
-    provider: Literal["ollama", "groq", "fake"]
+    provider: Literal["ollama", "groq", "deepinfra", "fake"]
     model: str
     k: int
     think: Optional[bool] = None
@@ -57,6 +58,9 @@ LLM_CONFIGS = [
                 extra={"reasoning_effort": "low"}, tier="llm"),
     # llama-3.3-70b-versatile dropped (agreed fallback): Groq returned 404 model_not_found on 2026-10-23.
     # ModelConfig("llama-3.3-70b", "groq", "llama-3.3-70b-versatile", k=1, tier="llm"),
+    # Same model from a second provider (2026-10-23): Groq made it Enterprise-only.
+    # DeepInfra serves only the FP8 "Turbo" build of Llama-3.3-70B-Instruct. Frozen settings unchanged.
+    ModelConfig("llama-3.3-70b", "deepinfra", "meta-llama/Llama-3.3-70B-Instruct-Turbo", k=1, tier="llm"),
 ]
 
 ALL_CONFIGS = SLM_CONFIGS + LLM_CONFIGS

@@ -92,6 +92,22 @@ def test_groq_key_never_in_repr_or_errors(monkeypatch):
     assert "gsk_secret_value" not in str(e.value)
 
 
+def test_deepinfra_uses_its_endpoint_key_and_max_tokens(monkeypatch):
+    monkeypatch.setenv("DEEPINFRA_API_KEY", "di_secret")
+    body = json.dumps({"choices": [{"message": {"content": "ok"}}],
+                       "usage": {"prompt_tokens": 5, "completion_tokens": 6}}).encode()
+    op = StubOpener([(200, {}, body)])
+    cfg = ModelConfig("l", "deepinfra", "meta-llama/Llama-3.3-70B-Instruct", k=1, tier="llm")
+    b = backends.make_backend(cfg, opener=op)
+    c = b.complete(MSG, 0.0, 1.0, 1, 1024)
+    req = op.requests[0]
+    sent = json.loads(req.data)
+    assert req.full_url.startswith("https://api.deepinfra.com/")
+    assert req.get_header("Authorization") == "Bearer di_secret" and "di_secret" not in repr(b)
+    assert sent["max_tokens"] == 1024 and "max_completion_tokens" not in sent
+    assert c.text == "ok" and c.completion_tokens == 6
+
+
 def test_groq_missing_key(monkeypatch):
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     cfg = ModelConfig("g", "groq", "llama-3.3-70b-versatile", k=1, tier="llm")

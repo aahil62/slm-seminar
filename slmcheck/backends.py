@@ -104,24 +104,27 @@ class OllamaBackend:
 
 
 class GroqBackend:
+    """OpenAI-compatible chat completions; subclasses only change the endpoint and key variable."""
+    URL, KEY_ENV, LABEL, MAX_TOKENS_FIELD = config.GROQ_URL, "GROQ_API_KEY", "groq", "max_completion_tokens"
+
     def __init__(self, cfg: ModelConfig, opener: Opener = default_opener):
-        if not os.environ.get("GROQ_API_KEY"):
-            raise BackendError("GROQ_API_KEY is not set")
+        if not os.environ.get(self.KEY_ENV):
+            raise BackendError(f"{self.KEY_ENV} is not set")
         self.cfg, self.opener = cfg, opener
 
     def __repr__(self):
-        return f"GroqBackend(model={self.cfg.model!r})"
+        return f"{type(self).__name__}(model={self.cfg.model!r})"
 
     def complete(self, messages, temperature, top_p, seed, max_tokens):
         payload = {"model": self.cfg.model, "messages": messages, "temperature": temperature,
-                   "top_p": top_p, "seed": seed, "max_completion_tokens": max_tokens,
+                   "top_p": top_p, "seed": seed, self.MAX_TOKENS_FIELD: max_tokens,
                    **self.cfg.extra}
         # Groq sits behind Cloudflare, which rejects urllib's default "Python-urllib/x.y" agent
         # with HTTP 403 "error code: 1010"; send an explicit client name instead.
-        headers = {"Authorization": "Bearer " + os.environ["GROQ_API_KEY"], "User-Agent": USER_AGENT}
+        headers = {"Authorization": "Bearer " + os.environ[self.KEY_ENV], "User-Agent": USER_AGENT}
         t0 = time.time()
         for attempt in range(4):
-            status, hdrs, body = _post(self.opener, config.GROQ_URL, payload, headers, 600)
+            status, hdrs, body = _post(self.opener, self.URL, payload, headers, 600)
             if status == 429:
                 raise RateLimited(float(hdrs.get("retry-after", 60) or 60))
             if status >= 500 and attempt < 3:
@@ -129,7 +132,7 @@ class GroqBackend:
                 continue
             break
         if status != 200:
-            raise BackendError(f"groq HTTP {status}: {body[:300]!r}")
+            raise BackendError(f"{self.LABEL} HTTP {status}: {body[:300]!r}")
         d = json.loads(body)
         msg = d["choices"][0]["message"]
         usage = d.get("usage", {})
@@ -138,9 +141,16 @@ class GroqBackend:
                           time.time() - t0, self.cfg.model)
 
 
+class DeepInfraBackend(GroqBackend):
+    """Second cloud provider, used because Groq moved Llama-3.3-70B to Enterprise-only."""
+    URL, KEY_ENV, LABEL, MAX_TOKENS_FIELD = config.DEEPINFRA_URL, "DEEPINFRA_API_KEY", "deepinfra", "max_tokens"
+
+
 def make_backend(cfg: ModelConfig, opener: Opener = default_opener) -> Backend:
     if cfg.provider == "ollama":
         return OllamaBackend(cfg, opener)
     if cfg.provider == "groq":
         return GroqBackend(cfg, opener)
+    if cfg.provider == "deepinfra":
+        return DeepInfraBackend(cfg, opener)
     raise BackendError(f"no real backend for provider {cfg.provider!r}")
