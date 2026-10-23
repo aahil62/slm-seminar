@@ -85,6 +85,7 @@ The paper (`paper_journal/main.pdf`) has the full tables, confidence intervals a
 | `results/livecodebench/`, `results/mbppplus/` | result tables (CSV), `RESULTS.md`, verification report and notes for each benchmark |
 | `paper_journal/` | Springer Nature (`sn-jnl`) journal paper: `main.tex`, `main.pdf`, `gen.py`/`build.py` generate every number from the result tables |
 | `report/` | PCCOE Technical Seminar report: build script, content, figures, final `.docx`/`.pdf` |
+| `explainer/` | 6-page project explainer for the seminar defence (`explainer.pdf`, numbers from the paper) |
 | `tools/` | operational scripts used on the GPU machine (supervisor, independent manual checker, cloud runner, hidden key prompt, README table) |
 | `docs/` | design and plan, literature index, `RESULTS_SUMMARY.md`, `PROVENANCE.md`, `CONSISTENCY_AUDIT.md` |
 | `archive/paper_ieee_draft/` | superseded 6-page IEEE draft (history only) |
