@@ -55,7 +55,8 @@ SLM_CONFIGS = [
 LLM_CONFIGS = [
     ModelConfig("gpt-oss-120b", "groq", "openai/gpt-oss-120b", k=1, max_tokens=8192,
                 extra={"reasoning_effort": "low"}, tier="llm"),
-    ModelConfig("llama-3.3-70b", "groq", "llama-3.3-70b-versatile", k=1, tier="llm"),
+    # llama-3.3-70b-versatile dropped (agreed fallback): Groq returned 404 model_not_found on 2026-10-23.
+    # ModelConfig("llama-3.3-70b", "groq", "llama-3.3-70b-versatile", k=1, tier="llm"),
 ]
 
 ALL_CONFIGS = SLM_CONFIGS + LLM_CONFIGS
