@@ -1,0 +1,53 @@
+{
+ "generated_at": "2026-10-23 19:16:32",
+ "fake": false,
+ "python": "3.11.7",
+ "platform": "Windows-10-10.0.26200-SP0",
+ "git_commit": "36c8c799502ec674a4bc90b9ec0f52de33f3165b",
+ "since": "2025-01-01",
+ "n_problems": 200,
+ "configs": {
+  "deepseek-coder-6.7b": {
+   "samples": 1000,
+   "digests": [
+    "ce298d984115b93bb1b191b47fee6b39e4e9fbd5f18e651c02f9fa74e0edcd13"
+   ]
+  },
+  "deepseek-v3.1": {
+   "samples": 200,
+   "digests": [
+    "DeepSeek-V3.1"
+   ]
+  },
+  "gpt-oss-120b": {
+   "samples": 200,
+   "digests": [
+    "openai/gpt-oss-120b"
+   ]
+  },
+  "qwen2.5-coder-1.5b": {
+   "samples": 1000,
+   "digests": [
+    "d7372fd828518a4d38b1eb196c673c31a85f2ed302b3d1e406c4c2d1b64a0668"
+   ]
+  },
+  "qwen2.5-coder-7b": {
+   "samples": 1000,
+   "digests": [
+    "dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364"
+   ]
+  },
+  "qwen3-4b-nothink": {
+   "samples": 1000,
+   "digests": [
+    "2bfd38a7daaf4b1037efe517ccb73d1a3bbd4822cf89f1a82be1569050a114e0"
+   ]
+  },
+  "qwen3-4b-think": {
+   "samples": 200,
+   "digests": [
+    "2bfd38a7daaf4b1037efe517ccb73d1a3bbd4822cf89f1a82be1569050a114e0"
+   ]
+  }
+ }
+}

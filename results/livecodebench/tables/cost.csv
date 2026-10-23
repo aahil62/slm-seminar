@@ -1,0 +1,8 @@
+cfg,samples,mean_wall_s_per_sample,mean_wall_s_per_problem_all_k,mean_completion_tokens,mean_thinking_chars,errors,empty_code
+deepseek-coder-6.7b,910,7.0229,35.1143,324.3253,0,1,2
+deepseek-v3.1,182,20.1533,20.1533,835.4505,0,0,0
+gpt-oss-120b,182,4.1137,4.1137,1772.522,2372.1923,0,0
+qwen2.5-coder-1.5b,910,4.4288,22.1438,184.4352,0,1,1
+qwen2.5-coder-7b,910,7.1317,35.6583,221.5648,0,0,0
+qwen3-4b-nothink,910,10.8235,54.1175,427.4582,0,0,0
+qwen3-4b-think,182,113.8339,113.8339,6573,24423.2582,0,117
