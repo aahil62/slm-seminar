@@ -6,3 +6,19 @@ runs/
 bundle/
 data/raw/
 .env
+logs/
+*.zip
+
+# LaTeX / document build junk
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.toc
+*.synctex.gz
+build*.log
+layout_preview.pdf
+*_layout_preview.pdf
+_template_dl/
+~$*.docx
