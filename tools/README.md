@@ -1,8 +1,8 @@
 # tools
 
-Operational scripts used on the GPU machine during the real runs (they lived outside the repo in
-`D:\slm\ops`). They are not part of the harness and have no tests; paths at the top of each script are
-the ones used there (`D:\slm\seminar`), adjust before reuse. None of them contains or logs an API key.
+Helper scripts from the real runs, kept because the results depend on them. They are not part of the harness
+and have no tests; a path at the top of a script may still be the GPU machine's (`D:\slm\seminar`), adjust
+before reuse.
 
 | script | purpose |
 |---|---|

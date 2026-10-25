@@ -74,7 +74,7 @@ In words (LiveCodeBench, GPT-OSS-120B as the cloud model):
   S5: 45 %), and local-first escalation even beats it (7B with S5: 33.5 % vs 32.4 %). The 2025-03-01 split
   (34.3 % before vs 30.0 % after) shows no clear contamination signal; every model drops a few points after that date.
 
-The paper (`paper_journal/main.pdf`) has the full tables, confidence intervals and McNemar tests.
+The paper (`paper_journal/paper_journal_A4.tex`) has the full tables, confidence intervals and McNemar tests.
 
 ## Repository layout
 
@@ -83,12 +83,9 @@ The paper (`paper_journal/main.pdf`) has the full tables, confidence intervals a
 | `slmcheck/` | the harness: download, prepare, generate, execute, select (S0–S5), evaluate, verify gates, report |
 | `tests/` | pytest suite on fixtures (no models needed) |
 | `results/livecodebench/`, `results/mbppplus/` | result tables (CSV), `RESULTS.md`, verification report and notes for each benchmark |
-| `paper_journal/` | Springer Nature (`sn-jnl`) journal paper: `main.tex`, `main.pdf`, `gen.py`/`build.py` generate every number from the result tables |
-| `report/` | PCCOE Technical Seminar report: build script, content, figures, final `.docx`/`.pdf` |
-| `explainer/` | 6-page project explainer for the seminar defence (`explainer.pdf`, numbers from the paper) |
-| `tools/` | operational scripts used on the GPU machine (supervisor, independent manual checker, cloud runner, hidden key prompt, README table) |
-| `docs/` | design and plan, literature index, `RESULTS_SUMMARY.md`, `PROVENANCE.md`, `CONSISTENCY_AUDIT.md`, `PROJECT_HISTORY.md` |
-| `archive/paper_ieee_draft/` | superseded 6-page IEEE draft (history only) |
+| `paper_journal/` | the journal paper (A4): `paper_journal_A4.tex`, `figures/`; `analysis/` computes the paper's extra analyses from the bundle |
+| `tools/` | independent manual checker, contamination split, README table |
+| `docs/` | study design (`DESIGN.md`), literature index, `RESULTS_SUMMARY.md`, `PROVENANCE.md` |
 
 Raw runs (`runs/`), the full bundle with raw samples (`bundle/`, `slmcheck_bundle.zip`, about 110 MB) and
 downloaded data (`data/raw/`) are not in git. The bundle and the final paper and explainer PDFs are attached to
@@ -120,8 +117,8 @@ ollama pull qwen3:4b-q4_K_M
 ```
 
 Cloud keys are read from the environment only: `GROQ_API_KEY` (GPT-OSS-120B) and `SAMBANOVA_API_KEY`
-(DeepSeek-V3.1). Set them with a hidden prompt so they never appear in a file, log or chat
-(for example `Read-Host -AsSecureString` in PowerShell), then open a new shell. `SLMCHECK_OLLAMA_URL` points the
+(DeepSeek-V3.1). Set them with a hidden prompt (for example `Read-Host -AsSecureString` in PowerShell) so they never appear in a
+file, log or chat, then open a new shell. `SLMCHECK_OLLAMA_URL` points the
 harness at a non-default Ollama server; `SLMCHECK_PARALLEL` sets in-flight requests for local configs.
 
 Dry run without any model: `python -m slmcheck all --fake --run-dir runs/dryrun --out runs/dryrun_bundle`
@@ -179,13 +176,9 @@ python -m slmcheck report --run-dir runs\mbpp --out bundle\mbppplus
 Independent spot checks (plain `subprocess`, not the harness executor):
 `python -I tools/manual_check.py runs\main 8 5 5 41`.
 
-### 7. Paper and report
+### 7. Paper
 
-```powershell
-.\.venv\Scripts\python.exe paper_journal\build.py     # regenerates numbers/tables/figures, compiles main.pdf
-```
-
-The report build is described in `report/README.md`.
+See `paper_journal/README.md` (compile `paper_journal_A4.tex`; `analysis/` re-derives the extra analyses).
 
 ## Harness fixes made during the real runs
 
