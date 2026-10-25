@@ -87,11 +87,12 @@ The paper (`paper_journal/main.pdf`) has the full tables, confidence intervals a
 | `report/` | PCCOE Technical Seminar report: build script, content, figures, final `.docx`/`.pdf` |
 | `explainer/` | 6-page project explainer for the seminar defence (`explainer.pdf`, numbers from the paper) |
 | `tools/` | operational scripts used on the GPU machine (supervisor, independent manual checker, cloud runner, hidden key prompt, README table) |
-| `docs/` | design and plan, literature index, `RESULTS_SUMMARY.md`, `PROVENANCE.md`, `CONSISTENCY_AUDIT.md` |
+| `docs/` | design and plan, literature index, `RESULTS_SUMMARY.md`, `PROVENANCE.md`, `CONSISTENCY_AUDIT.md`, `PROJECT_HISTORY.md` |
 | `archive/paper_ieee_draft/` | superseded 6-page IEEE draft (history only) |
 
 Raw runs (`runs/`), the full bundle with raw samples (`bundle/`, `slmcheck_bundle.zip`, about 110 MB) and
-downloaded data (`data/raw/`) are not in git.
+downloaded data (`data/raw/`) are not in git. The bundle and the final paper and explainer PDFs are attached to
+the GitHub Release `v1.0`.
 
 ## Reproducing
 
@@ -242,4 +243,5 @@ Corresponding author: Aahil Sayed, aahil.sayed24@pccoepune.org.
 ## History
 
 Earlier directions of this repository (the SLM swarm on `main` and the AERS pipeline on `aers-slm/rebuild`)
-are retired and kept as the tags `archive/main-swarm` and `archive/aers-slm-rebuild`.
+are retired and kept as the tags `archive/main-swarm` and `archive/aers-slm-rebuild`; a teammate's
+`feature/member1-slm-pipeline` branch is kept as `archive/member1-slm-pipeline`. `main` now points at this work.

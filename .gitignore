@@ -22,3 +22,4 @@ layout_preview.pdf
 *_layout_preview.pdf
 _template_dl/
 ~$*.docx
+.DS_Store
