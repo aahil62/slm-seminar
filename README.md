@@ -89,7 +89,7 @@ The paper (`paper_journal/paper_journal_A4.tex`) has the full tables, confidence
 
 Raw runs (`runs/`), the full bundle with raw samples (`bundle/`, `slmcheck_bundle.zip`, about 110 MB) and
 downloaded data (`data/raw/`) are not in git. The bundle and the final paper and explainer PDFs are attached to
-the GitHub Release `v1.1`.
+the GitHub Release `v1.0`.
 
 ## Reproducing
 
@@ -99,7 +99,7 @@ if something stops, fix the cause and rerun the same command.
 ### 1. Setup
 
 ```powershell
-git clone https://github.com/GauravJaypatre/Technical-Seminar-Prototype-01 seminar
+git clone https://github.com/aahil62/slm-seminar seminar
 cd seminar
 git checkout research/slmcheck
 py -3.11 -m venv .venv
@@ -227,7 +227,7 @@ All found by the gates or by independent manual re-runs; each has a test.
              Small Code Models},
   author  = {Sayed, Aahil and Shinde, Swati V.},
   year    = {2026},
-  note    = {Manuscript. Code and data: https://github.com/GauravJaypatre/Technical-Seminar-Prototype-01 (branch research/slmcheck)}
+  note    = {Manuscript. Code and data: https://github.com/aahil62/slm-seminar}
 }
 ```
 
