@@ -1,6 +1,6 @@
-# Passing the Examples Is Not Enough
+# Passing Isn't Proof
 
-**Realistic Checks, Silent Bugs and Local-First Escalation for Small Code Models**
+**Silent Bugs and Local-First Escalation in Small Code Models**
 
 Code, result tables, journal paper and seminar report for a Technical Seminar research project at
 Pimpri Chinchwad College of Engineering (PCCOE), Pune.
@@ -89,7 +89,7 @@ The paper (`paper_journal/paper_journal_A4.tex`) has the full tables, confidence
 
 Raw runs (`runs/`), the full bundle with raw samples (`bundle/`, `slmcheck_bundle.zip`, about 110 MB) and
 downloaded data (`data/raw/`) are not in git. The bundle and the final paper and explainer PDFs are attached to
-the GitHub Release `v1.0`.
+the GitHub Release `v1.1`.
 
 ## Reproducing
 
@@ -223,8 +223,8 @@ All found by the gates or by independent manual re-runs; each has a test.
 
 ```bibtex
 @article{sayed2026passing,
-  title   = {Passing the Examples Is Not Enough: Realistic Checks, Silent Bugs and
-             Local-First Escalation for Small Code Models},
+  title   = {Passing Isn't Proof: Silent Bugs and Local-First Escalation in
+             Small Code Models},
   author  = {Sayed, Aahil and Shinde, Swati V.},
   year    = {2026},
   note    = {Manuscript. Code and data: https://github.com/GauravJaypatre/Technical-Seminar-Prototype-01 (branch research/slmcheck)}
