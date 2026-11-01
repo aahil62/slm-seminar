@@ -158,7 +158,7 @@ Not changed: models and tags (except item 1), k and seeds (except item 2), tempe
   the extraction samples with syntax errors are exactly the truncated prose / mid-code outputs above. Solves both test types
   (stdin 36, functional 23); by difficulty 43/45 easy, 12/55 medium, 4/82 hard. It beats the best SLM S0 only marginally
   (0.324 vs 0.319) because of the truncation; gpt-oss-120b (which reasons briefly and writes compact code) stays far ahead.
-- **Contamination split** (design section 5; script `tools/contamination_split.py`, output `contamination_split.md`): accuracy before
+- **Contamination split** (script `tools/contamination_split.py`, output `contamination_split.md`): accuracy before
   vs on/after 2025-03-01 (102 vs 80 problems). DeepSeek-V3.1 34.3% vs 30.0%, gpt-oss-120b 53.9% vs 55.0%, qwen3-4b-think 32.4% vs 31.2%,
   qwen2.5-coder-7b 22.5% vs 17.5%, deepseek-coder-6.7b 15.7% vs 10.0%. Every model loses a few points after the cut-off, including models
   released long before it, and the later period has relatively fewer easy problems (18/80 vs 27/102), so the split shows no clear

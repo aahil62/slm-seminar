@@ -74,7 +74,7 @@ In words (LiveCodeBench, GPT-OSS-120B as the cloud model):
   S5: 45 %), and local-first escalation even beats it (7B with S5: 33.5 % vs 32.4 %). The 2025-03-01 split
   (34.3 % before vs 30.0 % after) shows no clear contamination signal; every model drops a few points after that date.
 
-The paper (`paper_journal/paper_journal_A4.tex`) has the full tables, confidence intervals and McNemar tests.
+The paper (PDF on the GitHub Release `v1.0`) has the full tables, confidence intervals and McNemar tests.
 
 ## Repository layout
 
@@ -83,12 +83,10 @@ The paper (`paper_journal/paper_journal_A4.tex`) has the full tables, confidence
 | `slmcheck/` | the harness: download, prepare, generate, execute, select (S0–S5), evaluate, verify gates, report |
 | `tests/` | pytest suite on fixtures (no models needed) |
 | `results/livecodebench/`, `results/mbppplus/` | result tables (CSV), `RESULTS.md`, verification report and notes for each benchmark |
-| `paper_journal/` | the journal paper (A4): `paper_journal_A4.tex`, `figures/`; `analysis/` computes the paper's extra analyses from the bundle |
 | `tools/` | independent manual checker, contamination split, README table |
-| `docs/` | study design (`DESIGN.md`), literature index, `RESULTS_SUMMARY.md`, `PROVENANCE.md` |
 
 Raw runs (`runs/`), the full bundle with raw samples (`bundle/`, `slmcheck_bundle.zip`, about 110 MB) and
-downloaded data (`data/raw/`) are not in git. The bundle and the final paper and explainer PDFs are attached to
+downloaded data (`data/raw/`) are not in git. The bundle and the paper PDF are attached to
 the GitHub Release `v1.0`.
 
 ## Reproducing
@@ -101,7 +99,6 @@ if something stops, fix the cause and rerun the same command.
 ```powershell
 git clone https://github.com/aahil62/slm-seminar seminar
 cd seminar
-git checkout research/slmcheck
 py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m pytest -q          # fixtures only, no models
@@ -176,10 +173,6 @@ python -m slmcheck report --run-dir runs\mbpp --out bundle\mbppplus
 Independent spot checks (plain `subprocess`, not the harness executor):
 `python -I tools/manual_check.py runs\main 8 5 5 41`.
 
-### 7. Paper
-
-See `paper_journal/README.md` (compile `paper_journal_A4.tex`; `analysis/` re-derives the extra analyses).
-
 ## Harness fixes made during the real runs
 
 All found by the gates or by independent manual re-runs; each has a test.
@@ -235,6 +228,5 @@ Corresponding author: Aahil Sayed, aahil.sayed24@pccoepune.org.
 
 ## History
 
-Earlier directions of this repository (the SLM swarm on `main` and the AERS pipeline on `aers-slm/rebuild`)
-are retired and kept as the tags `archive/main-swarm` and `archive/aers-slm-rebuild`; a teammate's
-`feature/member1-slm-pipeline` branch is kept as `archive/member1-slm-pipeline`. `main` now points at this work.
+This study replaces two earlier directions of the seminar project (an SLM swarm and a staged AERS pipeline for
+repository repair); both were dropped because small models scored near zero on multi-file patch tasks.

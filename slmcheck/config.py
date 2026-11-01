@@ -1,4 +1,4 @@
-"""Fixed experiment settings. Values come from the design doc (sections 4-6)."""
+"""Fixed experiment settings. Models, sampling, budgets and benchmark windows."""
 from __future__ import annotations
 
 import os

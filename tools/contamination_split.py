@@ -1,4 +1,4 @@
-"""Contamination sub-analysis (design section 5): LiveCodeBench accuracy before vs on/after 2025-03-01.
+"""Contamination sub-analysis: LiveCodeBench accuracy before vs on/after 2025-03-01.
 
 python -I contamination_split.py D:\\slm\\seminar\\runs\\main  > contamination_split.md
 S0 (first sample) for every config, plus S1 (pass@k) for the multi-sample SLMs. Wilson 95% intervals.

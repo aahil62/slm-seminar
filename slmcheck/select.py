@@ -1,4 +1,4 @@
-"""Answer-selection strategies S0-S5 (design section 6) and per-config N1 metrics."""
+"""Answer-selection strategies S0-S5 and per-config N1 metrics."""
 from __future__ import annotations
 
 from collections import defaultdict
