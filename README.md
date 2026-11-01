@@ -2,16 +2,16 @@
 
 **Silent Bugs and Local-First Escalation in Small Code Models**
 
-Code, result tables, journal paper and seminar report for a Technical Seminar research project at
-Pimpri Chinchwad College of Engineering (PCCOE), Pune.
+Code and results for an empirical study of small code models under the checks a developer actually has,
+carried out at the Department of Computer Engineering, Pimpri Chinchwad College of Engineering (PCCOE), Pune.
 
-- **Author:** Aahil Sayed (Third Year B.Tech, Computer Engineering, PCCOE, Pune; group GA12)
-- **Guide:** Prof. Dr. Swati V. Shinde (Dean MIS, PCCOE, Pune)
+- **Author:** Aahil Sayed, Department of Computer Engineering, PCCOE, Pune
+- **Supervisor:** Prof. Dr. Swati V. Shinde, PCCOE, Pune
 
-## What this is
+## Overview
 
 Small code models running locally can match much larger cloud models *when hidden unit tests pick the
-best of k samples* (Hassid et al., COLM 2024). A developer never has those hidden tests. This project asks
+best of k samples* (Hassid et al., COLM 2024). A developer never has those hidden tests. This study asks
 what is left of that result when the selection is done with checks a developer really has:
 
 | strategy | how the answer is chosen |
@@ -74,7 +74,7 @@ In words (LiveCodeBench, GPT-OSS-120B as the cloud model):
   S5: 45 %), and local-first escalation even beats it (7B with S5: 33.5 % vs 32.4 %). The 2025-03-01 split
   (34.3 % before vs 30.0 % after) shows no clear contamination signal; every model drops a few points after that date.
 
-The paper (PDF on the GitHub Release `v1.0`) has the full tables, confidence intervals and McNemar tests.
+Full tables with Wilson intervals and Holm-corrected McNemar tests are in `results/<benchmark>/tables/`.
 
 ## Repository layout
 
@@ -86,19 +86,18 @@ The paper (PDF on the GitHub Release `v1.0`) has the full tables, confidence int
 | `tools/` | independent manual checker, contamination split, README table |
 
 Raw runs (`runs/`), the full bundle with raw samples (`bundle/`, `slmcheck_bundle.zip`, about 110 MB) and
-downloaded data (`data/raw/`) are not in git. The bundle and the paper PDF are attached to
-the GitHub Release `v1.0`.
+downloaded data (`data/raw/`) are not in git. The bundle is attached to the GitHub Release `v1.0`.
 
 ## Reproducing
 
-Windows PowerShell shown (the original runs); on Linux/macOS use `.venv/bin/python`. Every step is resumable:
-if something stops, fix the cause and rerun the same command.
+Commands are shown for Windows PowerShell, where the original runs were made; on Linux/macOS use
+`.venv/bin/python`. Every step is resumable: if something stops, fix the cause and rerun the same command.
 
 ### 1. Setup
 
 ```powershell
-git clone https://github.com/aahil62/slm-seminar seminar
-cd seminar
+git clone https://github.com/aahil62/slm-seminar
+cd slm-seminar
 py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m pytest -q          # fixtures only, no models
@@ -115,7 +114,7 @@ ollama pull qwen3:4b-q4_K_M
 
 Cloud keys are read from the environment only: `GROQ_API_KEY` (GPT-OSS-120B) and `SAMBANOVA_API_KEY`
 (DeepSeek-V3.1). Set them with a hidden prompt (for example `Read-Host -AsSecureString` in PowerShell) so they never appear in a
-file, log or chat, then open a new shell. `SLMCHECK_OLLAMA_URL` points the
+file or log, then open a new shell. `SLMCHECK_OLLAMA_URL` points the
 harness at a non-default Ollama server; `SLMCHECK_PARALLEL` sets in-flight requests for local configs.
 
 Dry run without any model: `python -m slmcheck all --fake --run-dir runs/dryrun --out runs/dryrun_bundle`
@@ -173,7 +172,7 @@ python -m slmcheck report --run-dir runs\mbpp --out bundle\mbppplus
 Independent spot checks (plain `subprocess`, not the harness executor):
 `python -I tools/manual_check.py runs\main 8 5 5 41`.
 
-## Harness fixes made during the real runs
+## Harness fixes made during the runs
 
 All found by the gates or by independent manual re-runs; each has a test.
 
@@ -185,7 +184,7 @@ All found by the gates or by independent manual re-runs; each has a test.
 | `52e9e1e` | optional parallel in-flight requests for local configs (`SLMCHECK_PARALLEL`) |
 | `80a96d8` | best-effort temp-dir cleanup so a locked dir on Windows cannot abort `evaluate` |
 | `12bdce6` | `evaluate --cfg` to execute finished configs while others still generate |
-| `f98015f` | qwen3-4b-think k = 2 → 1 (agreed fallback; generation time far above budget) |
+| `f98015f` | qwen3-4b-think k = 2 → 1 (planned fallback; generation time far above budget) |
 | `71051de` | candidate header `from math import *` shadowed 3-argument `pow`; builtins restored |
 | `2078b28` | extraction prefers the program block over echoed asserts, strips lone fences; `slmcheck.reextract` |
 | `3ec9fd0` | explicit User-Agent for Groq (Cloudflare 403 "error code: 1010" on urllib's default agent) |
@@ -202,7 +201,7 @@ All found by the gates or by independent manual re-runs; each has a test.
 - **Small window.** Only `test5`/`test6` of LiveCodeBench exist, so 182 problems; the post-2025-03-01 split is about five weeks.
 - **One cloud sample.** Cloud models ran with k = 1 (greedy, temperature 0); local multi-sample configs drew
   sample 0 greedily and samples 1–4 at temperature 0.8, top-p 0.95.
-- **qwen3-4b-think k = 1** (agreed fallback), so S1–S5 cannot be measured for it, and 64 % of its LiveCodeBench
+- **qwen3-4b-think k = 1** (planned fallback), so S1–S5 cannot be measured for it, and 64 % of its LiveCodeBench
   samples hit the frozen 8,192-token cap (9 % on MBPP+).
 - **Shared GPU.** Runs used an RTX PRO 4000 Blackwell shared with another job (about 7 GB VRAM free) with
   concurrent requests; wall times are not laptop timings and batched decoding causes small run-to-run differences.
@@ -225,8 +224,3 @@ All found by the gates or by independent manual re-runs; each has a test.
 ```
 
 Corresponding author: Aahil Sayed, aahil.sayed24@pccoepune.org.
-
-## History
-
-This study replaces two earlier directions of the seminar project (an SLM swarm and a staged AERS pipeline for
-repository repair); both were dropped because small models scored near zero on multi-file patch tasks.
