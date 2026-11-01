@@ -1,0 +1,11 @@
+llm,slm,n,acc_llm,acc_S0,acc_S5,gap_S5,local_share_S5,casc_S5
+gpt-oss-120b,qwen2.5-coder-1.5b,80,0.55,0.0625,0.1,0.0769,0.075,0.55
+gpt-oss-120b,qwen2.5-coder-7b,80,0.55,0.175,0.25,0.2,0.1375,0.5375
+gpt-oss-120b,deepseek-coder-6.7b,80,0.55,0.1,0.175,0.1667,0.125,0.5375
+gpt-oss-120b,qwen3-4b-nothink,80,0.55,0.2375,0.35,0.36,0.2625,0.55
+gpt-oss-120b,qwen3-4b-think,80,0.55,0.3125,0.3125,0.0,0.3375,0.525
+deepseek-v3.1,qwen2.5-coder-1.5b,80,0.3,0.0625,0.1,0.1579,0.075,0.3
+deepseek-v3.1,qwen2.5-coder-7b,80,0.3,0.175,0.25,0.6,0.1375,0.3125
+deepseek-v3.1,deepseek-coder-6.7b,80,0.3,0.1,0.175,0.375,0.125,0.3125
+deepseek-v3.1,qwen3-4b-nothink,80,0.3,0.2375,0.35,1.8,0.2625,0.325
+deepseek-v3.1,qwen3-4b-think,80,0.3,0.3125,0.3125,,0.3375,0.3375

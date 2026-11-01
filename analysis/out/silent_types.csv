@@ -1,0 +1,17 @@
+bench,group,strategy,accepted,silent,wrong_answer,tier_medium,type_functional,loc_sum,timeout,type_stdin,tier_easy,tier_hard,runtime_error,type_script
+lcb,multi,S2,251,87,45,27,31,2206,38,56,10,50,4,
+lcb,multi,S3,96,35,34,17,17,601,1,18,7,11,,
+lcb,multi,S4,231,126,109,47,46,2946,14,80,27,52,3,
+lcb,multi,S5,128,23,10,6,11,415,12,12,4,13,1,
+lcb,think,S2,60,2,2,1,,29,,2,1,,,
+lcb,think,S3,52,1,1,1,,12,,1,,,,
+lcb,think,S4,63,5,5,3,2,121,,3,1,1,,
+lcb,think,S5,60,2,2,1,,29,,2,1,,,
+mbpp,multi,S2,734,157,126,,,1607,9,,157,,22,157
+mbpp,multi,S3,390,62,48,,,498,3,,62,,11,62
+mbpp,multi,S4,658,124,99,,,1119,4,,124,,21,124
+mbpp,multi,S5,624,90,68,,,831,4,,90,,18,90
+mbpp,think,S2,178,24,19,,,150,,,24,,5,24
+mbpp,think,S3,143,15,13,,,80,,,15,,2,15
+mbpp,think,S4,182,28,23,,,177,,,28,,5,28
+mbpp,think,S5,178,24,19,,,150,,,24,,5,24

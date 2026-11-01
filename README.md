@@ -1,12 +1,12 @@
-# Passing Isn't Proof
+# An Empirical Study of Small Language Models for Local Code Generation
 
-**Silent Bugs and Local-First Escalation in Small Code Models**
+**Program Selection, Silent Bugs and Local-First Escalation**
 
-Code and results for an empirical study of small code models under the checks a developer actually has,
-carried out at the Department of Computer Engineering, Pimpri Chinchwad College of Engineering (PCCOE), Pune.
+Code, results and analysis scripts for the paper of the same title, from the Department of Computer Engineering,
+Pimpri Chinchwad College of Engineering (PCCOE), Pune.
 
-- **Author:** Aahil Sayed, Department of Computer Engineering, PCCOE, Pune
-- **Supervisor:** Prof. Dr. Swati V. Shinde, PCCOE, Pune
+- **Authors:** Aahil Sayed, Swati Shinde, Pranav Chaudhari, Gaurav Jaypatre and Prachi Pawar
+- **Corresponding authors:** Swati Shinde (swati.shinde@pccoepune.org) and Aahil Sayed (aahil.sayed24@pccoepune.org)
 
 ## Overview
 
@@ -66,11 +66,11 @@ In words (LiveCodeBench, GPT-OSS-120B as the cloud model):
   consistently lower false-pass rates (14–30 % LiveCodeBench, 13–16 % MBPP+).
 - Local-first escalation with S5: Qwen2.5-Coder-7B keeps about 20 % of problems local and reaches 52.7 %
   against 54.4 % all-cloud; on MBPP+ it keeps 85 % local at 79.0 % against 80.0 %.
-- Qwen3-4B thinking is the best single local sample (31.9 %) but costs 6.6 k tokens per sample, and 64 % of
+- Qwen3-4B thinking is the best single local sample (31.9 %) but costs 6.6 k tokens per sample, and 65 % of
   samples hit the 8,192-token cap.
 - DeepSeek-V3.1 (non-thinking) reaches only 32.4 % on LiveCodeBench (79.0 % on MBPP+): 121 of its 182 answers hit
-  the frozen 1,024-token output cap while still explaining, and 111 of them contain no complete program; 59 of the 71
-  answers with a complete program pass (83 %). Against it the local models close far more of the gap (Qwen2.5-Coder-7B
+  the frozen 1,024-token output cap while still explaining, and 113 of them contain no complete program (all but one of those fail); 58 of the
+  69 answers with a complete program pass (84 %). Against it the local models close far more of the gap (Qwen2.5-Coder-7B
   S5: 45 %), and local-first escalation even beats it (7B with S5: 33.5 % vs 32.4 %). The 2025-03-01 split
   (34.3 % before vs 30.0 % after) shows no clear contamination signal; every model drops a few points after that date.
 
@@ -84,6 +84,7 @@ Full tables with Wilson intervals and Holm-corrected McNemar tests are in `resul
 | `tests/` | pytest suite on fixtures (no models needed) |
 | `results/livecodebench/`, `results/mbppplus/` | result tables (CSV), `RESULTS.md`, verification report and notes for each benchmark |
 | `tools/` | independent manual checker, contamination split, README table |
+| `analysis/` | scripts behind the paper's extra analyses and figures (`analyses.py`, `figures.py`); their outputs in `analysis/out/` |
 
 Raw runs (`runs/`), the full bundle with raw samples (`bundle/`, `slmcheck_bundle.zip`, about 110 MB) and
 downloaded data (`data/raw/`) are not in git. The bundle is attached to the GitHub Release `v1.0`.
@@ -172,6 +173,18 @@ python -m slmcheck report --run-dir runs\mbpp --out bundle\mbppplus
 Independent spot checks (plain `subprocess`, not the harness executor):
 `python -I tools/manual_check.py runs\main 8 5 5 41`.
 
+### 7. Paper analyses and figures
+
+The paper's extra analyses (contamination split, false passes by tier, silent-bug types, token cost, bootstrap
+intervals for gap recovered, overlap with the cloud model) and its figures are computed from the bundle. To
+reproduce them without rerunning any model, unzip `slmcheck_bundle.zip` from the release so that
+`bundle/livecodebench/raw/` exists, then:
+
+```powershell
+python analysis/analyses.py      # writes analysis/out/*.csv
+python analysis/figures.py       # writes analysis/figures/*.pdf
+```
+
 ## Harness fixes made during the runs
 
 All found by the gates or by independent manual re-runs; each has a test.
@@ -201,7 +214,7 @@ All found by the gates or by independent manual re-runs; each has a test.
 - **Small window.** Only `test5`/`test6` of LiveCodeBench exist, so 182 problems; the post-2025-03-01 split is about five weeks.
 - **One cloud sample.** Cloud models ran with k = 1 (greedy, temperature 0); local multi-sample configs drew
   sample 0 greedily and samples 1–4 at temperature 0.8, top-p 0.95.
-- **qwen3-4b-think k = 1** (planned fallback), so S1–S5 cannot be measured for it, and 64 % of its LiveCodeBench
+- **qwen3-4b-think k = 1** (planned fallback), so S1–S5 cannot be measured for it, and 65 % of its LiveCodeBench
   samples hit the frozen 8,192-token cap (9 % on MBPP+).
 - **Shared GPU.** Runs used an RTX PRO 4000 Blackwell shared with another job (about 7 GB VRAM free) with
   concurrent requests; wall times are not laptop timings and batched decoding causes small run-to-run differences.
@@ -214,13 +227,11 @@ All found by the gates or by independent manual re-runs; each has a test.
 ## Citation
 
 ```bibtex
-@article{sayed2026passing,
-  title   = {Passing Isn't Proof: Silent Bugs and Local-First Escalation in
-             Small Code Models},
-  author  = {Sayed, Aahil and Shinde, Swati V.},
+@article{sayed2026empirical,
+  title   = {An Empirical Study of Small Language Models for Local Code Generation:
+             Program Selection, Silent Bugs and Local-First Escalation},
+  author  = {Sayed, Aahil and Shinde, Swati and Chaudhari, Pranav and Jaypatre, Gaurav and Pawar, Prachi},
   year    = {2026},
   note    = {Manuscript. Code and data: https://github.com/aahil62/slm-seminar}
 }
 ```
-
-Corresponding author: Aahil Sayed, aahil.sayed24@pccoepune.org.
